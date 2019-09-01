@@ -35,7 +35,10 @@ class pixel_ : public PIXEL {
 		int y;
 		RGBT colour;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 		pixel_(int tx, int ty, RGBT tcolour): PIXEL((PIXEL){.x=&x, .y=&y, .colour=&colour}), x(tx), y(ty), colour(tcolour) {};
+#pragma GCC diagnostic pop
 
 		double luma() const {
 			return colour.r*1.0/255*0.299 + colour.g*01.0/255*.587 
