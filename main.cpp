@@ -23,6 +23,7 @@ struct light_source {
 	RGBT colour;
 };
 
+//complaints about compound literals
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 const struct plane planes[] = {
@@ -142,6 +143,7 @@ HIT::type ray_find_obstacle(const v3d& eye, const v3d& dir,
 int main() {
 
 	std::unique_ptr<framebuf> fb = framebuf::make_unique();
+//complaints about compound literals
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 	pixel_ pixel(0, 50, (RGBT){.r=255, .g=0, .b=0, .t=0});
@@ -196,6 +198,7 @@ int main() {
 				colour = planes[hitindex].colour;
 			} else if(type == HIT::undef) {
 				// give a visual indication of undef
+//complaints about compound literals
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 				colour = (RGBT){.r=(int)(x*255/W), .g=(int)(y*255/H), .b=(int)(x*y*255/(W*H)), .t=255};

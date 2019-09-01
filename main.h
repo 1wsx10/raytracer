@@ -28,6 +28,7 @@ class matrix {
 			double sx = sin(angle.x), sy = sin(angle.y), sz = sin(angle.z);
 			double sxsz = sx*sz, cxsz = cx*sz;
 			double cxcz = cx*cz, sxcz = sx*cz;
+//complaints about compound literals
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 			matrix result = (matrix){.m={
