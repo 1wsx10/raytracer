@@ -28,11 +28,14 @@ class matrix {
 			double sx = sin(angle.x), sy = sin(angle.y), sz = sin(angle.z);
 			double sxsz = sx*sz, cxsz = cx*sz;
 			double cxcz = cx*cz, sxcz = sx*cz;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 			matrix result = (matrix){.m={
 				v3d(cy*cz, cy*sz, -sy),
 				v3d(sxcz*sy - cxsz, sxsz*sy + cxcz, sx*cy),
 				v3d(cxcz*sy + sxsz, cxsz*sy - sxcz, cx*cy)
 			}};
+#pragma GCC diagnostic pop
 			*this = result;
 		}
 

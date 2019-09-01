@@ -23,6 +23,8 @@ struct light_source {
 	RGBT colour;
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 const struct plane planes[] = {
 	/* declare 6 planes, each looks towords origin and is 30 units away
 	 */
@@ -53,6 +55,7 @@ const struct light_source lights[] = {
 	{RANDOM_POSITION, (RGBT){255,255,255,255}},
 	{RANDOM_POSITION, (RGBT){255,255,255,255}},
 };
+#pragma GCC diagnostic pop
 
 
 #define N_ELEMS(x) sizeof(x) / sizeof(*x)
@@ -139,7 +142,10 @@ HIT::type ray_find_obstacle(const v3d& eye, const v3d& dir,
 int main() {
 
 	std::unique_ptr<framebuf> fb = framebuf::make_unique();
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 	pixel_ pixel(0, 50, (RGBT){.r=255, .g=0, .b=0, .t=0});
+#pragma GCC diagnostic pop
 
 #if 0
 	int i;
@@ -190,7 +196,10 @@ int main() {
 				colour = planes[hitindex].colour;
 			} else if(type == HIT::undef) {
 				// give a visual indication of undef
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 				colour = (RGBT){.r=(int)(x*255/W), .g=(int)(y*255/H), .b=(int)(x*y*255/(W*H)), .t=255};
+#pragma GCC diagnostic pop
 			} else {
 				assert(false);// add the shape type to the draw call
 			}
