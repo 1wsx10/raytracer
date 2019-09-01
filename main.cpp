@@ -6,39 +6,47 @@
 /**
  * Walls are Planes. Planes have a normal vector and a Distance.
  */
-const struct plane {
+struct plane {
 	v3d normal;
 	double offset;
-} planes[] = {
+	RGBT colour;
+};
+
+struct sphere {
+	v3d center;
+	double radius;
+	RGBT colour;
+};
+
+struct light_source {
+	v3d position;
+	RGBT colour;
+};
+
+const struct plane planes[] = {
 	/* declare 6 planes, each looks towords origin and is 30 units away
 	 */
-	{v3d(0,0,-1), -30},
-	{v3d(0, 1,0), -30},
-	{v3d(0,-1,0), -30},
-	{v3d( 1,0,0), -30},
-	{v3d(0,0, 1), -30},
-	{v3d(-1,0,0), -30},
+	{v3d(0,0,-1), -30, (RGBT){.r=128, .g=128, .b=128, .t=255}},
+	{v3d(0, 1,0), -30, (RGBT){.r=128, .g=128, .b=128, .t=255}},
+	{v3d(0,-1,0), -30, (RGBT){.r=128, .g=128, .b=128, .t=255}},
+	{v3d( 1,0,0), -30, (RGBT){.r=128, .g=128, .b=128, .t=255}},
+	{v3d(0,0, 1), -30, (RGBT){.r=128, .g=128, .b=128, .t=255}},
+	{v3d(-1,0,0), -30, (RGBT){.r=128, .g=128, .b=128, .t=255}},
 };
 
 #define RANDOM_POSITION v3d((rand()%60)-30,(rand()%60)-30,(rand()%60)-30)
 
-const struct sphere {
-	v3d center;
-	double radius;
-} spheres[] = {
+const struct sphere spheres[] = {
 	/* declare a few spheres */
-	{RANDOM_POSITION, (double)(rand()%8)},
-	{RANDOM_POSITION, (double)(rand()%8)},
-	{RANDOM_POSITION, (double)(rand()%8)},
-	{RANDOM_POSITION, (double)(rand()%8)},
-	{RANDOM_POSITION, (double)(rand()%8)},
-	{RANDOM_POSITION, (double)(rand()%8)},
+	{RANDOM_POSITION, (double)(rand()%8), (RGBT){.r=128, .g=128, .b=128, .t=255}},
+	{RANDOM_POSITION, (double)(rand()%8), (RGBT){.r=128, .g=128, .b=128, .t=255}},
+	{RANDOM_POSITION, (double)(rand()%8), (RGBT){.r=128, .g=128, .b=128, .t=255}},
+	{RANDOM_POSITION, (double)(rand()%8), (RGBT){.r=128, .g=128, .b=128, .t=255}},
+	{RANDOM_POSITION, (double)(rand()%8), (RGBT){.r=128, .g=128, .b=128, .t=255}},
+	{RANDOM_POSITION, (double)(rand()%8), (RGBT){.r=128, .g=128, .b=128, .t=255}},
 };
 
-const struct light_source {
-	v3d position;
-	RGBT colour;
-} lights[] = {
+const struct light_source lights[] = {
 	/* declare some lightsources
 	 * a light source has a position and a colour
 	 */
@@ -126,23 +134,26 @@ HIT::type ray_find_obstacle(const v3d& eye, const v3d& dir,
 
 
 
-
+#define uint unsigned int
 
 int main() {
 
 	std::unique_ptr<framebuf> fb = framebuf::make_unique();
 	pixel_ pixel(0, 50, (RGBT){.r=255, .g=0, .b=0, .t=0});
 
+#if 0
 	int i;
 	((PIXEL*)&pixel)->x = &i; // this compiles to the same thing as changing the value of a FBINFO
 	for(i = 30; i < 100; i++) {
 		pixel.x = i;
 		draw(fb.get(), &pixel);
 	}
+#endif
 
 	const unsigned W = fb->vinfo.xres;
 	const unsigned H = fb->vinfo.yres;
 
+	/*
 	for(unsigned frameno = 0; frameno < 9300; ++frameno) {
 		for(unsigned y = 0; y < H; y++) {
 			for(unsigned x = 0; x < W; x++) {
@@ -153,6 +164,44 @@ int main() {
 			}
 		}
 	}
+	*/
+
+
+	v3d eye(0,0,0);
+	v3d dir(1,1,0);
+	dir.normalise();
+
+#if 1
+	for(uint x = 0; x < W; x++) {
+		for(uint y = 0; y < H; y++) {
+			double hitdist = -1;
+			int hitindex = -1;
+			v3d hitloc;
+			v3d hitnormal;
+			RGBT colour;
+
+			// try to find an object
+			HIT::type type = ray_find_obstacle(eye, dir, hitdist, hitindex, hitloc, hitnormal);
+
+			// look up the shape, so that we know the colour to draw
+			if(type == HIT::sphere) {
+				colour = spheres[hitindex].colour;
+			} else if(type == HIT::plane) {
+				colour = planes[hitindex].colour;
+			} else if(type == HIT::undef) {
+				// give a visual indication of undef
+				colour = (RGBT){.r=(int)(x*255/W), .g=(int)(y*255/H), .b=(int)(x*y*255/(W*H)), .t=255};
+			} else {
+				assert(false);// add the shape type to the draw call
+			}
+
+			pixel_ pix(x, y, colour);
+
+			//draw(fb.get(), std::make_unique<pixel_>(x, y, colour).get());
+			draw(fb.get(), &pix);
+		}
+	}
+#endif
 
 
 	return EXIT_SUCCESS;
