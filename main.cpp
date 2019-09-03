@@ -1,4 +1,6 @@
 #include "main.h"
+#include "timer.hpp"
+#include "limits.h"
 
 /* Declarations for Scene description.
  */
@@ -131,7 +133,90 @@ HIT::type ray_find_obstacle(const v3d& eye, const v3d& dir,
 }
 
 
+#define LOOP_ASM_TEST 0
+	/*  =============================
+	 *     testing different loops
+	 *  =============================
+	 */
+#if LOOP_ASM_TEST
+int nested_loop(int a, int b) {
+	volatile int last = 0;
 
+	for(int i = 0; i < a; i++) {
+		for(int j = 0; j < b; j++) {
+			last = i * j;
+		}
+	}
+
+	return last;
+}
+
+int single_loop_div(int a, int b) {
+	volatile int last = 0;
+
+	for(int x = 0; x < a*b; x++) {
+		div_t intermediate = div(x, b);
+		int i = intermediate.quot;
+		int j = intermediate.rem;
+
+		last = i * j;
+	}
+
+	return last;
+}
+
+int single_loop_asm(int a, int b) {
+#if defined(__i386__) || defined(__x86_64__)
+	volatile int last = 0;
+
+	for(int x = 0; x < a*b; x++) {
+		// preset i to x
+		//   (it becomes the least significant bits of the division)
+		//   it then becomes the quotient
+		int i = x;
+		// preset j to 0
+		//   (it becomes the most significant bits of the division)
+		//   it then becomes the remainder
+		int j = 0;
+
+		/*
+		 * idiv: divisor is a 64 bit int (so needs 2 registers)
+		 *   most  significant 32 is the EDX register
+		 *   least significant 32 is the EAX register
+		 *
+		 *   EAX register becomes the quotient
+		 *   EDX register becomes the remainder
+		 */
+		__asm__ (
+				"idiv %2          \n\t"       //divide by (b)
+				:"+a"(i), "+d"(j)             //output
+				:"r"(static_cast<int32_t>(b)) //input
+				:                             //clobber
+				);
+
+		last = i * j;
+	}
+
+	return last;
+#else
+#error
+	return single_loop(a, b);
+#endif
+}
+
+int single_loop(int a, int b) {
+	volatile int last = 0;
+
+	for(int x = 0; x < a*b; x++) {
+		int i = x / b;
+		int j = x % b;
+
+		last = i * j;
+	}
+
+	return last;
+}
+#endif
 
 
 
@@ -173,6 +258,44 @@ int main() {
 		}
 	}
 	*/
+
+
+	/*  =============================
+	 *     testing different loops
+	 *  =============================
+	 */
+#if LOOP_ASM_TEST
+	int asmall = 3;
+	int bsmall = 8;
+	int a = 1010;
+	int b = 2327;
+
+	assert((long long int)a*(long long int)b < INT_MAX);
+
+	printf("double loop: \n");
+	{ timer timer_double;
+
+		nested_loop(a, b);
+	}
+
+	printf("single loop / %%: \n");
+	{ timer timer_single;
+
+		single_loop(a, b);
+	}
+
+	printf("single loop div: \n");
+	{ timer timer_single_div;
+
+		single_loop_div(a, b);
+	}
+
+	printf("single loop asm: \n");
+	{ timer timer_single_asm;
+
+		single_loop_asm(a, b);
+	}
+#endif
 
 
 	v3d eye(0,0,0);
