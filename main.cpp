@@ -75,8 +75,8 @@ max_trace = 6; // maximuum trace level
  * line, and determine exactly which point of the object is seen.
  */
 HIT::type ray_find_obstacle(const v3d& eye, const v3d& dir,
-		double& hitdist, int& hitindex,
-		v3d& hitloc, v3d& hitnormal) {
+		double& hit_dist, int& hit_index,
+		v3d& hit_loc, v3d& hit_normal) {
 
 	if(!(rand() % 100)) {// check this is normalized every now and then
 		assert(fabs(dir.length()) - 1 < 1e-6);
@@ -102,13 +102,13 @@ HIT::type ray_find_obstacle(const v3d& eye, const v3d& dir,
 			double sqt = sqrt(sq);
 			double dist = fmin(-dv - sqt, -dv + sqt) / d2;
 
-			if(dist < 1e-6 || dist > hitdist) continue;
+			if(dist < 1e-6 || dist > hit_dist) continue;
 
 			type = HIT::sphere;
-			hitindex = i;
-			hitdist = dist;
-			hitloc = eye + (dir * hitdist);
-			hitnormal = (hitloc - spheres[i].center) * (1/r);
+			hit_index = i;
+			hit_dist = dist;
+			hit_loc = eye + (dir * hit_dist);
+			hit_normal = (hit_loc - spheres[i].center) * (1/r);
 		}
 	}
 
@@ -120,16 +120,99 @@ HIT::type ray_find_obstacle(const v3d& eye, const v3d& dir,
 			
 			double d2 = planes[i].normal.dot(eye);
 			double dist = (d2 + planes[i].offset) / dv;
-			if(dist < 1e-6 || dist >= hitdist) continue;
+			if(dist < 1e-6 || dist >= hit_dist) continue;
 
-			type = HIT::plane; hitindex = i;
-			hitdist = dist;
-			hitloc = eye + (dir * hitdist);
-			hitnormal = -planes[i].normal;
+			type = HIT::plane; hit_index = i;
+			hit_dist = dist;
+			hit_loc = eye + (dir * hit_dist);
+			hit_normal = -planes[i].normal;
 		}
 	}
 
 	return type;
+}
+
+const unsigned num_areaa_light_vectors = 20;
+v3d area_light_vectors[num_areaa_light_vectors];
+void init_area_light_vectors() {
+	for(unsigned i = 0; i < num_areaa_light_vectors; i++) {
+		// specify a point within 1 unit of the point in any direction
+		area_light_vectors[i].x = 2.0 * (rand() / double(RAND_MAX) - 0.5);
+		area_light_vectors[i].y = 2.0 * (rand() / double(RAND_MAX) - 0.5);
+		area_light_vectors[i].z = 2.0 * (rand() / double(RAND_MAX) - 0.5);
+	}
+}
+
+/**
+ * shoot a camera-ray from the specified location to
+ * specified location, and determine the RGB colour of the perception
+ * corresponding to that location.
+ *
+ * @param k    recursion depth
+ */
+void ray_trace(v3d &result_colour, const v3d &eye, const v3d& dir, int k) {
+	double hit_dist = 1e6;
+	v3d hit_loc, hit_normal;
+	int hit_index;
+	HIT::type type = ray_find_obstacle(eye, dir, hit_dist, hit_index, hit_loc, hit_normal);
+	if(type != HIT::undef) {
+		/* Found an obstacle. Next, find out how it is illuminated.
+		 * shoot a ray to each lightsource, and determine if there
+		 * is an obstacle behind it. This is called "diffuse light"
+		 */
+		v3d diffuse_light = v3d(0,0,0);
+		v3d specular_light = v3d(0,0,0);
+		v3d pigment = v3d(1, 0.98, 0.94);
+		for(unsigned i = 0; i < num_lights; i++)
+			for(unsigned j = 0; j < num_areaa_light_vectors; j++) {
+				v3d v = (lights[i].position + area_light_vectors[j]) - hit_loc;
+				v.normalise();
+
+				double light_dist = v.length();
+				double diffuse_effect = hit_normal.dot(v) 
+					/ (double)num_areaa_light_vectors;
+
+				double attenuation = (1 + pow(light_dist / 34.0, 2.0));
+				diffuse_effect /= attenuation;
+
+				if(diffuse_effect > 1e-3) {
+					double shadow_dist = light_dist - 1e-4;
+					v3d a,b;
+					int q;
+					HIT::type occluder = ray_find_obstacle(hit_loc + v*1e-4, v, shadow_dist, q, a, b);//TODO: check a, b, and q are in the right positions
+						if(occluder == HIT::undef) {
+							diffuse_light.x += lights[i].colour.r * diffuse_effect;
+							diffuse_light.y += lights[i].colour.g * diffuse_effect;
+							diffuse_light.z += lights[i].colour.b * diffuse_effect;
+						}
+				}
+			}
+
+		if(k > 1) {
+			// add specular light reflection, unless recursion depth is set at max
+			v3d v = -dir; v.mirror(hit_normal);
+			ray_trace(specular_light, hit_loc + v*1e-4, v, k-1);
+		}
+		switch(type) {
+			case HIT::plane:
+				diffuse_light *= 0.9;
+				specular_light *= 0.5;
+				// colour the different walls differently
+				switch(hit_index % 3) {
+					case 0: pigment.set(0.9, 0.7, 0.6); break;
+					case 1: pigment.set(0.6, 0.7, 0.7); break;
+					case 2: pigment.set(0.5, 0.8, 0.3); break;
+				}
+				break;
+			case HIT::sphere:
+				diffuse_light *= 1.0;
+				specular_light *= 0.34;
+				break;
+			case HIT::undef: break;// this will never happen
+		}
+
+		result_colour = (diffuse_light + specular_light).mul_elems(pigment);
+	}
 }
 
 
@@ -227,6 +310,7 @@ int single_loop(int a, int b) {
 int main() {
 
 	std::unique_ptr<framebuf, framebuf::deleter> fb = framebuf::make_unique();
+	init_area_light_vectors();
 
 //complaints about compound literals
 #pragma GCC diagnostic push
