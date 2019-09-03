@@ -223,7 +223,6 @@ int single_loop(int a, int b) {
 
 
 
-#define uint unsigned int
 
 int main() {
 
@@ -302,42 +301,39 @@ int main() {
 	v3d dir(1,1,0);
 	dir.normalise();
 
-#if 1
-	for(uint x = 0; x < W; x++) {
-		for(uint y = 0; y < H; y++) {
-			double hitdist = -1;
-			int hitindex = -1;
-			v3d hitloc;
-			v3d hitnormal;
-			RGBT colour;
+	{ timer mytimer;// start timer here
 
-			// try to find an object
-			HIT::type type = ray_find_obstacle(eye, dir, hitdist, hitindex, hitloc, hitnormal);
+		for(uint x = 0; x < W; x++) {
+			for(uint y = 0; y < H; y++) {
+				double hitdist = -1;
+				int hitindex = -1;
+				v3d hitloc;
+				v3d hitnormal;
+				RGBT colour;
 
-			// look up the shape, so that we know the colour to draw
-			if(type == HIT::sphere) {
-				colour = spheres[hitindex].colour;
-			} else if(type == HIT::plane) {
-				colour = planes[hitindex].colour;
-			} else if(type == HIT::undef) {
-				// give a visual indication of undef
-//complaints about compound literals
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-				colour = (RGBT){.r=(int)(x*255/W), .g=(int)(y*255/H), .b=(int)(x*y*255/(W*H)), .t=255};
-#pragma GCC diagnostic pop
-			} else {
-				assert(false);// add the shape type to the draw call
+				// try to find an object
+				HIT::type type = ray_find_obstacle(eye, dir, hitdist, hitindex, hitloc, hitnormal);
+
+				// look up the shape, so that we know the colour to draw
+				if(type == HIT::sphere) {
+					colour = spheres[hitindex].colour;
+				} else if(type == HIT::plane) {
+					colour = planes[hitindex].colour;
+				} else if(type == HIT::undef) {
+					// give a visual indication of undef
+					colour = {(int)(x*255/W), (int)(y*255/H), (int)(x*y*255/(W*H)), 255};
+				} else {
+					assert(false);// add the shape type to the draw call
+				}
+
+				pixel_ pix(x, y, colour);
+
+				//draw(fb.get(), std::make_unique<pixel_>(x, y, colour).get());
+				draw(fb.get(), &pix);
 			}
-
-			pixel_ pix(x, y, colour);
-
-			//draw(fb.get(), std::make_unique<pixel_>(x, y, colour).get());
-			draw(fb.get(), &pix);
 		}
-	}
-#endif
 
+	}// timer finishes here
 
 	return EXIT_SUCCESS;
 }
