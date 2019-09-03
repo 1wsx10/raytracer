@@ -226,7 +226,8 @@ int single_loop(int a, int b) {
 
 int main() {
 
-	std::unique_ptr<framebuf> fb = framebuf::make_unique();
+	std::unique_ptr<framebuf, framebuf::deleter> fb = framebuf::make_unique();
+
 //complaints about compound literals
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"

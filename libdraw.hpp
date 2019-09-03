@@ -8,25 +8,15 @@
 
 class framebuf : public FBINFO {
 	public:
-	
+		struct deleter { void operator()(framebuf* __ptr) const; };
 
-		~framebuf() {
-			//end(this);
-		}
-
-		static std::unique_ptr<framebuf> make_unique() {
-			framebuf* ptr = static_cast<framebuf*>(init());
-
-			//this is calling the ctor, which init already does
-			//*static_cast<FBINFO*>(ptr) = FBINFO();
-
-			return std::unique_ptr<framebuf>(ptr);
-		}
+		static std::unique_ptr<framebuf, framebuf::deleter> make_unique();
 
 	protected:
 		// don't want anything to call this
 		framebuf() {};
 };
+
 
 
 class pixel_ : public PIXEL {
