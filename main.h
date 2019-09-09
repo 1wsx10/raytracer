@@ -9,6 +9,10 @@
 #include <climits>
 #include <cfloat>
 
+#include <ncurses.h>
+
+#include <chrono>
+
 
 #define DEBUG 1
 #define IS_APPROX_0(X, DELTA) (abs(X) < (DELTA))

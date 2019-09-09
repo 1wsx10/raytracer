@@ -96,8 +96,66 @@ HIT::type ray_cast(const v3d& start, const v3d& dir,
 	return hit;
 }
 
+class curse {
+	public:
+		struct deleter { void operator()(curse* __ptr) const {
+			endwin();
+		}; };
+
+		static std::unique_ptr<curse, curse::deleter> make_unique() {
+			initscr();
+
+			return std::unique_ptr<curse, deleter>(new curse, deleter());
+		};
+
+	protected:
+		// don't want anything to call this
+		curse() {};
+};
+
+
 int main() {
 	timer main_timer("main timer");
+
+
+	{
+		std::unique_ptr<curse, curse::deleter> holder = curse::make_unique();
+		noecho();
+		curs_set(false);
+
+		mvprintw(1, 0, "Hello");
+		mvprintw(2, 3, "World!");
+		refresh();
+
+		mmask_t my_settings = ALL_MOUSE_EVENTS;
+		mousemask(my_settings, nullptr);
+
+		time_point<steady_clock> start_time = steady_clock::now();
+		std::chrono::duration<double> time_delta;
+		do {
+			time_delta = steady_clock::now() - start_time;
+			mvprintw(0, 0, "time delta: %.0f", time_delta);
+
+			MEVENT event;
+			int ch = getch();
+			if(ch == KEY_MOUSE || ch == KEY_MOVE) {
+				if(getmouse(&event) == OK) {
+					mvprintw(3, 0, "x: %d%10d", event.x, event.y);
+					mvprintw(event.y, event.x, "o");
+				} else {
+					mvprintw(3, 0, "no event :(");
+				}
+			} else if(ch == ERR) {
+				mvprintw(3, 0, "err");
+			} else {
+				mvprintw(3, 0, "not even a ch");
+			}
+			refresh();
+
+			sleep(1);
+		} while(time_delta.count() < 10);
+	}
+
 
 	std::unique_ptr<framebuf, framebuf::deleter> fb = framebuf::make_unique();
 	RGBT temp_rgbt = {255, 255, 255, 0};
