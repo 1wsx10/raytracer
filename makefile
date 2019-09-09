@@ -3,10 +3,12 @@ OBJECTS=$(SOURCES:.cpp=.o)
 DFILES=$(SOURCES:.cpp=.d)
 PROGRAM=a.out
 DFILERULES=-MMD -MP
-#CFLAGS= -O1 -std=c++2a -pedantic -Wall $(DFILERULES)
-CFLAGS= -O2 -std=c++2a -pedantic -Wall $(DFILERULES)
-#CFLAGS= -O3 -std=c++2a -pedantic -Wall $(DFILERULES)
-#CFLAGS= -g -std=c++2a -pedantic -Wall $(DFILERULES)
+# remove pedantic. this uses FB code, portability is already out the window
+CFLAGS= -O0 -std=c++2a -Wall $(DFILERULES)
+#CFLAGS= -O1 -std=c++2a -Wall $(DFILERULES)
+#CFLAGS= -O2 -std=c++2a -Wall $(DFILERULES)
+#CFLAGS= -O3 -std=c++2a -Wall $(DFILERULES)
+#CFLAGS= -g -std=c++2a -Wall $(DFILERULES)
 LDFLAGS=$(CFLAGS) -lncurses -lm
 CC=g++
 DOT_A_FILES= lib/vector/libvector.a lib/write_screen/libdraw.a
