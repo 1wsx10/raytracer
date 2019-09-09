@@ -4,8 +4,8 @@ DFILES=$(SOURCES:.cpp=.d)
 PROGRAM=a.out
 DFILERULES=-MMD -MP
 #CFLAGS= -O1 -std=c++2a -pedantic -Wall $(DFILERULES)
-#CFLAGS= -O2 -std=c++2a -pedantic -Wall $(DFILERULES)
-CFLAGS= -O3 -std=c++2a -pedantic -Wall $(DFILERULES)
+CFLAGS= -O2 -std=c++2a -pedantic -Wall $(DFILERULES)
+#CFLAGS= -O3 -std=c++2a -pedantic -Wall $(DFILERULES)
 #CFLAGS= -g -std=c++2a -pedantic -Wall $(DFILERULES)
 LDFLAGS=$(CFLAGS) -lncurses -lm
 CC=g++

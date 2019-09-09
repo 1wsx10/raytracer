@@ -2,14 +2,16 @@
 
 #include <chrono>
 #include <stdio.h>
+#include <string>
 
 using namespace std::chrono;
 
 class timer {
+		std::string name;
 	public:
 		time_point<high_resolution_clock> start_time;
 
-		timer() : start_time(high_resolution_clock::now()) {};
+		timer(std::string name) : name(name), start_time(high_resolution_clock::now()) {};
 
 		~timer() {
 			time_point<high_resolution_clock> end_time = high_resolution_clock::now();
@@ -17,6 +19,6 @@ class timer {
 			std::chrono::duration<double> seconds = end_time - start_time;
 			std::chrono::microseconds us = std::chrono::duration_cast<std::chrono::microseconds>(seconds);
 
-			printf("%fs\n%dus\n", seconds.count(), static_cast<int>(us.count()));
+			printf("%s %10dus\n", name.c_str(), static_cast<int>(us.count()));
 		}
 };
