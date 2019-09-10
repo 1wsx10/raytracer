@@ -181,74 +181,109 @@ std::string get_mouse_name(char *devices_list) {
 
 }
 
+struct rotation {
+	int x;
+	int y;
+};
+static struct rotation rot;
+
+
+
+void* controls(void *evt_name) {
+	std::string event_name = *(std::string*)evt_name;
+
+	int fd;
+	struct input_event ie;
+
+	size_t event_loc_len = 256;
+	char event_loc[event_loc_len];
+	snprintf(event_loc, event_loc_len, "/dev/input/%s", event_name.c_str());
+
+	if((fd = open(event_loc, O_RDONLY)) == -1) {
+		perror("opening device");
+		printf("%s\n", event_loc);
+		exit(EXIT_FAILURE);
+	}
+
+	while(read(fd, &ie, sizeof(struct input_event))) {
+		//printf("time %ld.%06ld\ttype %d\tcode %d\tvalue %d\n",
+		//    ie.time.tv_sec, ie.time.tv_usec, ie.type, ie.code, ie.value);
+
+		switch(ie.type) {
+			case EV_SYN:
+				break;
+
+			case EV_KEY:
+				switch(ie.code) {
+					case BTN_LEFT:
+						//printf("\tBTN_LEFT\t");
+						break;
+					case BTN_RIGHT:
+						//printf("\tBTN_RIGHT\t");
+						break;
+					case BTN_MIDDLE:
+						//printf("\tBTN_MIDDLE\t");
+						break;
+				}
+
+				if(ie.value) {
+					//printf("down\n");
+				} else {
+					//printf("up\n");
+				} break;
+
+			case EV_REL:
+				//printf("relative: %3d\t", ie.value);
+				switch(ie.code) {
+					case REL_X:
+						rot.x -= ie.value;
+						rot.x %= 180;
+						if(ie.value < 0) {
+							//printf("left\n");
+						} else {
+							//printf("right\n");
+						}
+						break;
+					case REL_Y:
+						int temp = rot.y - ie.value;
+						if(temp < -90) {
+							temp = -90;
+						} else if(temp > 90) {
+							temp = 90;
+						}
+						rot.y = temp;
+
+						if(ie.value < 0) {
+							//printf("up\n");
+						} else {
+							//printf("down\n");
+						}
+						break;
+				}
+				break;
+			case EV_ABS: break;
+		}
+	}
+
+	return NULL;
+}
+
+
 int main() {
 	timer main_timer("main timer");
 
 	std::string event_name = get_mouse_name((char*)"/proc/bus/input/devices");
 
 
-	{
+	rot.x = 0;
+	rot.y = 0;
 
-		int fd;
-		struct input_event ie;
+	pthread_t controls_id;
+	pthread_create(&controls_id, NULL, controls, &event_name);
 
-		size_t event_loc_len = 256;
-		char event_loc[event_loc_len];
-		snprintf(event_loc, event_loc_len, "/dev/input/%s", event_name.c_str());
 
-		if((fd = open(event_loc, O_RDONLY)) == -1) {
-			perror("opening device");
-			printf("%s\n", event_loc);
-			exit(EXIT_FAILURE);
-		}
 
-		while(read(fd, &ie, sizeof(struct input_event))) {
-			//printf("time %ld.%06ld\ttype %d\tcode %d\tvalue %d\n",
-			//    ie.time.tv_sec, ie.time.tv_usec, ie.type, ie.code, ie.value);
-
-			switch(ie.type) {
-				case EV_SYN: break;
-
-				case EV_KEY:
-					switch(ie.code) {
-						case BTN_LEFT:
-							printf("\tBTN_LEFT\t"); break;
-						case BTN_RIGHT:
-							printf("\tBTN_RIGHT\t"); break;
-						case BTN_MIDDLE:
-							printf("\tBTN_MIDDLE\t"); break;
-					}
-
-					if(ie.value) {
-						printf("down\n");
-					} else {
-						printf("up\n");
-					} break;
-
-				case EV_REL:
-					printf("relative: %3d\t", ie.value);
-					switch(ie.code) {
-						case REL_X:
-							if(ie.value < 0) {
-								printf("left\n");
-							} else {
-								printf("right\n");
-							}
-							break;
-						case REL_Y:
-							if(ie.value < 0) {
-								printf("up\n");
-							} else {
-								printf("down\n");
-							}
-							break;
-					}
-					break;
-				case EV_ABS: break;
-			}
-		}
-	}
-
+#if 0
 	{
 		std::unique_ptr<curse, curse::deleter> holder = curse::make_unique();
 		noecho();
@@ -287,6 +322,7 @@ int main() {
 			sleep(1);
 		} while(time_delta.count() < 10);
 	}
+#endif
 
 
 	std::unique_ptr<framebuf, framebuf::deleter> fb = framebuf::make_unique();
@@ -300,44 +336,53 @@ int main() {
 	 * there is a sphere at 000, with the radius = 5
 	 *  set the camera to point at that
 	 */
-	v3d start(-13, 2, -3);
-	v3d dir(1, 0, 0);
+	while(1) {
+		printf("draw\n");
+
+		v3d start(-13, 2, -3);
+		v3d dir(1, 0, 0);
+		dir.rotate(rot.y, v3d::Z);
+		dir.rotate(rot.x, -v3d::Y);
+
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"
-	// x gets converted to unsigned int, but all 
-	for(int x = 0; x < fb->vinfo.xres && x < INT_MAX; x++) {
+		// x gets converted to unsigned int, but all 
+		for(int x = 0; x < fb->vinfo.xres && x < INT_MAX; x++) {
 #pragma GCC diagnostic pop
-		static_cast<PIXEL*>(&pix)->x = &x;
+			static_cast<PIXEL*>(&pix)->x = &x;
 
-		double xr_on_2 = fb->vinfo.xres/2.0;
-		double angle = hfov * (x - xr_on_2) / (double)xr_on_2;
-		v3d pix_dir_x = v3d::rotate(dir, angle, v3d::Y);
+			double xr_on_2 = fb->vinfo.xres/2.0;
+			double angle = hfov * (x - xr_on_2) / (double)xr_on_2;
+			v3d pix_dir_x = v3d::rotate(dir, angle, v3d::Y);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"
-		for(int y = 0; y < fb->vinfo.yres && y < INT_MAX; y++) {
+			for(int y = 0; y < fb->vinfo.yres && y < INT_MAX; y++) {
 #pragma GCC diagnostic pop
-			static_cast<PIXEL*>(&pix)->y = &y;
+				static_cast<PIXEL*>(&pix)->y = &y;
 
-			double yr_on_2 = fb->vinfo.yres/2.0;
-			double angle = vfov * (y - yr_on_2) / (double)yr_on_2;
-			v3d pix_dir_xy = v3d::rotate(pix_dir_x, angle, v3d::Z);
-			// TODO: use pythagoras to do both rotations in 1
+				double yr_on_2 = fb->vinfo.yres/2.0;
+				double angle = vfov * (y - yr_on_2) / (double)yr_on_2;
+				v3d pix_dir_xy = v3d::rotate(pix_dir_x, angle, v3d::Z);
+				// TODO: use pythagoras to do both rotations in 1
 
-			unsigned int idx = 0;
-			HIT::type hit = ray_cast(start, pix_dir_xy, nullptr, &idx);
-			if(hit) {
-				if(idx == 0) {
-					pix.colour.g = 255;
-					pix.colour.b = 255;
-					pix.colour.t = 255;
-				} else {
-					pix.colour.g = 0;
-					pix.colour.b = 0;
-					pix.colour.t = 0;
+				unsigned int idx = 0;
+				HIT::type hit = ray_cast(start, pix_dir_xy, nullptr, &idx);
+				if(hit) {
+					if(idx == 0) {
+						pix.colour.r = 0;
+						pix.colour.g = 255;
+						pix.colour.b = 255;
+						pix.colour.t = 255;
+					} else {
+						pix.colour.r = 0;
+						pix.colour.g = 255;
+						pix.colour.b = 0;
+						pix.colour.t = 0;
+					}
+					draw(fb.get(), &pix);
 				}
-				draw(fb.get(), &pix);
 			}
 		}
 	}
