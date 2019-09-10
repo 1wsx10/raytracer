@@ -102,26 +102,110 @@ class curse {
 			endwin();
 		}; };
 
-		static std::unique_ptr<curse, curse::deleter> make_unique() {
-			initscr();
+		WINDOW *window;
 
-			return std::unique_ptr<curse, deleter>(new curse, deleter());
+		static std::unique_ptr<curse, curse::deleter> make_unique() {
+			return std::unique_ptr<curse, deleter>(
+					new curse(initscr()), deleter());
 		};
 
 	protected:
 		// don't want anything to call this
-		curse() {};
+		curse(WINDOW *window) :window(window) {};
 };
 
 
 int main() {
 	timer main_timer("main timer");
 
+	bool found_event_name = false;
+	std::string event_name;
+	do {
+		FILE *stream;
+		char file[] = "/proc/bus/input/devices";
+
+		if(!(stream = fopen(file, "r"))) {
+			perror(file);
+			break;
+		}
+		std::unique_ptr<FILE, void(*)(void*)> holder(stream, (void(*)(void*))fclose);
+
+
+		// regex to find the line that handles mouse input
+		size_t nmatch_ms = 2;
+		regmatch_t pmatch_ms[nmatch_ms];
+		regex_t match_mouse;
+		char *regx_ms = (char*)"Handlers=(.*mouse[0-9]+.*)";
+		regcomp(&match_mouse, regx_ms, REG_EXTENDED);
+
+		//regex to find the element within that line
+		size_t nmatch_evt = 2;
+		regmatch_t pmatch_evt[nmatch_evt];
+		regex_t match_event;
+		char *regx_evt = (char*)".*(event[0-9]+).*";
+		regcomp(&match_event, regx_evt, REG_EXTENDED);
+
+		{
+			// we can't use a unique_ptr here because it is null,
+			//  so the unique_ptr would not do its job
+			char *line = NULL;
+			ssize_t size_read;
+			size_t size_of_buffer;
+			while((size_read = getline(&line, &size_of_buffer, stream))) {
+
+				if(regexec(&match_mouse, line, nmatch_ms, pmatch_ms, 0) != REG_NOMATCH) {
+					char *mouse_section = line + pmatch_ms[1].rm_so;
+					if(regexec(&match_event, mouse_section, nmatch_evt, pmatch_evt, 0) != REG_NOMATCH) {
+						event_name.assign(
+								mouse_section + pmatch_evt[1].rm_so,
+								pmatch_evt[1].rm_eo - pmatch_evt[1].rm_so);
+
+						// successfully found a thing
+						found_event_name = true;
+						break;
+					}
+				}
+
+			}
+			// getline mallocs it regardless of success, so we need
+			//  to free it unconditionally
+			free(line);
+		}
+	} while(false);
+
+	if(found_event_name) {
+		printf("found evt name!: '%s'\n", event_name.c_str());
+	} else {
+		printf("no event found :(");
+	}
+
+
+	{
+
+		int fd;
+		struct input_event ie;
+
+		size_t event_loc_len = 256;
+		char event_loc[event_loc_len];
+		snprintf(event_loc, event_loc_len, "/dev/input/%s", event_name.c_str());
+
+		if((fd = open(event_loc, O_RDONLY)) == -1) {
+			perror("opening device");
+			printf("%s\n", event_loc);
+			exit(EXIT_FAILURE);
+		}
+
+		while(read(fd, &ie, sizeof(struct input_event))) {
+			printf("time %ld.%06ld\ttype %d\tcode %d\tvalue %d\n",
+					ie.time.tv_sec, ie.time.tv_usec, ie.type, ie.code, ie.value);
+		}
+	}
 
 	{
 		std::unique_ptr<curse, curse::deleter> holder = curse::make_unique();
 		noecho();
 		curs_set(false);
+		keypad(holder->window, true);
 
 		mvprintw(1, 0, "Hello");
 		mvprintw(2, 3, "World!");
