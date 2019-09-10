@@ -114,18 +114,16 @@ class curse {
 		curse(WINDOW *window) :window(window) {};
 };
 
-
-int main() {
-	timer main_timer("main timer");
+std::string get_mouse_name(char *devices_list) {
 
 	bool found_event_name = false;
 	std::string event_name;
 	do {
 		FILE *stream;
-		char file[] = "/proc/bus/input/devices";
+		//char devices_list[] = "/proc/bus/input/devices";
 
-		if(!(stream = fopen(file, "r"))) {
-			perror(file);
+		if(!(stream = fopen(devices_list, "r"))) {
+			perror(devices_list);
 			break;
 		}
 		std::unique_ptr<FILE, void(*)(void*)> holder(stream, (void(*)(void*))fclose);
@@ -174,10 +172,19 @@ int main() {
 	} while(false);
 
 	if(found_event_name) {
-		printf("found evt name!: '%s'\n", event_name.c_str());
+		//printf("found evt name!: '%s'\n", event_name.c_str());
+		return event_name;
 	} else {
-		printf("no event found :(");
+		//printf("no event found :(");
+		return nullptr;
 	}
+
+}
+
+int main() {
+	timer main_timer("main timer");
+
+	std::string event_name = get_mouse_name((char*)"/proc/bus/input/devices");
 
 
 	{
