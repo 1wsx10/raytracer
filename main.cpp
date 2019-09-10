@@ -196,8 +196,49 @@ int main() {
 		}
 
 		while(read(fd, &ie, sizeof(struct input_event))) {
-			printf("time %ld.%06ld\ttype %d\tcode %d\tvalue %d\n",
-					ie.time.tv_sec, ie.time.tv_usec, ie.type, ie.code, ie.value);
+			//printf("time %ld.%06ld\ttype %d\tcode %d\tvalue %d\n",
+			//    ie.time.tv_sec, ie.time.tv_usec, ie.type, ie.code, ie.value);
+
+			switch(ie.type) {
+				case EV_SYN: break;
+
+				case EV_KEY:
+					switch(ie.code) {
+						case BTN_LEFT:
+							printf("\tBTN_LEFT\t"); break;
+						case BTN_RIGHT:
+							printf("\tBTN_RIGHT\t"); break;
+						case BTN_MIDDLE:
+							printf("\tBTN_MIDDLE\t"); break;
+					}
+
+					if(ie.value) {
+						printf("down\n");
+					} else {
+						printf("up\n");
+					} break;
+
+				case EV_REL:
+					printf("relative: %3d\t", ie.value);
+					switch(ie.code) {
+						case REL_X:
+							if(ie.value < 0) {
+								printf("left\n");
+							} else {
+								printf("right\n");
+							}
+							break;
+						case REL_Y:
+							if(ie.value < 0) {
+								printf("up\n");
+							} else {
+								printf("down\n");
+							}
+							break;
+					}
+					break;
+				case EV_ABS: break;
+			}
 		}
 	}
 
