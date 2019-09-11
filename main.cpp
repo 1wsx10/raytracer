@@ -502,6 +502,15 @@ int main() {
 		double vfov = (hfov * fb->vinfo.yres) / fb->vinfo.xres;
 
 
+		// calculate up and right directions
+		v3d right;
+		v3d up = v3d::Y;
+		{
+			v3d forward = dir;;
+			forward.y = 0; forward.normalise();
+			right = v3d::cross(forward, up);
+		}
+
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"
@@ -513,7 +522,7 @@ int main() {
 			// account for difference in angle of different pixels
 			double xr_on_2 = fb->vinfo.xres/2.0;
 			double angle = hfov * (x - xr_on_2) / (double)xr_on_2;
-			v3d pix_dir_x = v3d::rotate(dir, angle, v3d::Y);
+			v3d pix_dir_x = v3d::rotate(dir, angle, up);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"
@@ -524,7 +533,7 @@ int main() {
 				// angle of pixels, but for Y axis
 				double yr_on_2 = fb->vinfo.yres/2.0;
 				double angle = vfov * (y - yr_on_2) / (double)yr_on_2;
-				v3d pix_dir_xy = v3d::rotate(pix_dir_x, angle, v3d::Z);
+				v3d pix_dir_xy = v3d::rotate(pix_dir_x, angle, right);
 				// TODO: use pythagoras to do both rotations in 1
 
 				unsigned int idx = 0;
