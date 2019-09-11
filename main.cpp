@@ -414,7 +414,17 @@ int main() {
 	// init ncurses
 	//std::unique_ptr<curse, curse::deleter> curse_ptr = curse::make_unique();
 	std::shared_ptr<curse> curse_ptr = curse::make_shared();
+	/* timeout sets the delay for getch()
+	 *  -1: block indefinitely
+	 *   0: don't block, give err instead
+	 *  >0: block for N ms, then give err
+	 */
+	timeout(-1);
+	// makes input return immediately on every char, rather than buffering a line
+	cbreak();
+	// don't print characters
 	noecho();
+	// don't show the cursor
 	curs_set(false);
 	keypad(curse_ptr->window, true);
 
