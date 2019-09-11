@@ -18,7 +18,6 @@ sphere spheres[] = {
 };
 unsigned int num_spheres = sizeof(spheres) / sizeof(spheres[0]);
 
-
 /** ray_cast to find out if a ray intersects with a sphere
  *
  * @param start    starting position of ray
@@ -98,15 +97,24 @@ HIT::type ray_cast(const v3d& start, const v3d& dir,
 
 class curse {
 	public:
-		struct deleter { void operator()(curse* __ptr) const {
-			endwin();
-		}; };
+		struct deleter {
+			void operator()(curse* __ptr) const {
+				endwin();
+			};
+			void end(void *__ptr) const {
+				endwin();
+			};
+		};
 
 		WINDOW *window;
 
 		static std::unique_ptr<curse, curse::deleter> make_unique() {
 			return std::unique_ptr<curse, deleter>(
 					new curse(initscr()), deleter());
+		};
+
+		static std::shared_ptr<curse> make_shared() {
+			return std::shared_ptr<curse>(new curse(initscr()), deleter());
 		};
 
 	protected:
@@ -178,18 +186,124 @@ std::string get_mouse_name(char *devices_list) {
 		//printf("no event found :(");
 		return nullptr;
 	}
-
 }
 
-struct rotation {
-	int x;
-	int y;
-};
-static struct rotation rot;
+pthread_mutex_t direction_mutex = PTHREAD_MUTEX_INITIALIZER;
+v3d direction(1,0,0);
+pthread_mutex_t translation_mutex = PTHREAD_MUTEX_INITIALIZER;
+v3d translation(-13, 2, -3);
+
+pthread_mutex_t fov_mutex = PTHREAD_MUTEX_INITIALIZER;
+double fov = 90;
+
+pthread_mutex_t quit_mutex = PTHREAD_MUTEX_INITIALIZER;
+bool quit = false;
+
+const double units_per_sec = 0.5;
+
+
+void* keys(void *curse_shared_ptr) {
+	std::shared_ptr<curse> curses_ptr = *(std::shared_ptr<curse>*)(curse_shared_ptr);
+
+	//time_point<steady_clock> start_time = steady_clock::now();
+	//std::chrono::duration<double> time_delta;
+	bool loop = true;
+
+	time_point<steady_clock> current_time = steady_clock::now();
+	do {
+		//time_delta = steady_clock::now() - start_time;
+		//mvprintw(0, 0, "time delta: %.0f", time_delta);
+
+
+		time_point<steady_clock> last_time = current_time;
+		current_time = steady_clock::now();
+
+
+		int key = getch();
+
+		// get the 3 unit vectors relative to direction
+		assert(!pthread_mutex_lock(&direction_mutex));
+		v3d forward = direction;
+		assert(!pthread_mutex_unlock(&direction_mutex));
+		// set forward vector to be not looking up or down
+		forward.y = 0; forward.normalise();
+		v3d up = v3d::Y;
+		v3d right = v3d::cross(forward, up);
+
+		duration<double> delta;
+		switch(key) {
+			case KEY_UP:
+			case (int)'w':
+				delta = current_time - last_time;
+				assert(!pthread_mutex_lock(&translation_mutex));
+				translation += forward * units_per_sec / delta.count();
+				assert(!pthread_mutex_unlock(&translation_mutex));
+				break;
+			case KEY_DOWN:
+			case (int)'s':
+				delta = current_time - last_time;
+				assert(!pthread_mutex_lock(&translation_mutex));
+				translation -= forward * units_per_sec / delta.count();
+				assert(!pthread_mutex_unlock(&translation_mutex));
+				break;
+			case KEY_RIGHT:
+			case (int)'d':
+				delta = current_time - last_time;
+				assert(!pthread_mutex_lock(&translation_mutex));
+				translation += right * units_per_sec / delta.count();
+				assert(!pthread_mutex_unlock(&translation_mutex));
+				break;
+			case KEY_LEFT:
+			case (int)'a':
+				delta = current_time - last_time;
+				assert(!pthread_mutex_lock(&translation_mutex));
+				translation -= right * units_per_sec / delta.count();
+				assert(!pthread_mutex_unlock(&translation_mutex));
+				break;
+
+			case (int)' ':
+				delta = current_time - last_time;
+				assert(!pthread_mutex_lock(&translation_mutex));
+				translation += up * units_per_sec / delta.count();
+				assert(!pthread_mutex_unlock(&translation_mutex));
+				break;
+			case (int)'c':
+				delta = current_time - last_time;
+				assert(!pthread_mutex_lock(&translation_mutex));
+				translation -= up * units_per_sec / delta.count();
+				assert(!pthread_mutex_unlock(&translation_mutex));
+				break;
+
+			case (int)'+':
+			case (int)'='://no shift held
+				assert(!pthread_mutex_lock(&fov_mutex));
+				fov *= 1.5;
+				assert(!pthread_mutex_unlock(&fov_mutex));
+				break;
+			case (int)'-':
+			case (int)'_'://shift held
+				assert(!pthread_mutex_lock(&fov_mutex));
+				fov /= 1.5;
+				assert(!pthread_mutex_unlock(&fov_mutex));
+				break;
 
 
 
-void* controls(void *evt_name) {
+			case 'q':
+			case KEY_EXIT:
+				assert(!pthread_mutex_lock(&quit_mutex));
+				quit = true;
+				loop = false;
+				assert(!pthread_mutex_unlock(&quit_mutex));
+				break;
+		}
+
+	} while(loop);
+
+	return NULL;
+}
+
+void* mouse(void *evt_name) {
 	std::string event_name = *(std::string*)evt_name;
 
 	int fd;
@@ -205,9 +319,19 @@ void* controls(void *evt_name) {
 		exit(EXIT_FAILURE);
 	}
 
+	double x_deg = 0;
+	double y_deg = 0;
+
 	while(read(fd, &ie, sizeof(struct input_event))) {
 		//printf("time %ld.%06ld\ttype %d\tcode %d\tvalue %d\n",
 		//    ie.time.tv_sec, ie.time.tv_usec, ie.type, ie.code, ie.value);
+
+		assert(!pthread_mutex_lock(&quit_mutex));
+		if(quit) {
+			assert(!pthread_mutex_unlock(&quit_mutex));
+			break;
+		}
+		assert(!pthread_mutex_unlock(&quit_mutex));
 
 		switch(ie.type) {
 			case EV_SYN:
@@ -236,8 +360,14 @@ void* controls(void *evt_name) {
 				//printf("relative: %3d\t", ie.value);
 				switch(ie.code) {
 					case REL_X:
-						rot.x -= ie.value;
-						rot.x %= 180;
+						x_deg -= ie.value;
+						while(x_deg > 360) {
+							x_deg -= 360;
+						}
+						while(x_deg < 0) {
+							x_deg += 360;
+						}
+						//x_deg %= 180;
 						if(ie.value < 0) {
 							//printf("left\n");
 						} else {
@@ -245,13 +375,13 @@ void* controls(void *evt_name) {
 						}
 						break;
 					case REL_Y:
-						int temp = rot.y - ie.value;
+						int temp = y_deg - ie.value;
 						if(temp < -90) {
 							temp = -90;
 						} else if(temp > 90) {
 							temp = 90;
 						}
-						rot.y = temp;
+						y_deg = temp;
 
 						if(ie.value < 0) {
 							//printf("up\n");
@@ -263,6 +393,15 @@ void* controls(void *evt_name) {
 				break;
 			case EV_ABS: break;
 		}
+
+		// set direction to be (1, 0, 0) rotated by x and y degrees
+		assert(!pthread_mutex_lock(&direction_mutex));
+
+		direction = 
+			v3d::rotate(v3d::X, y_deg, -v3d::Z)
+			.rotate(x_deg, -v3d::Y);
+
+		assert(!pthread_mutex_unlock(&direction_mutex));
 	}
 
 	return NULL;
@@ -272,23 +411,29 @@ void* controls(void *evt_name) {
 int main() {
 	timer main_timer("main timer");
 
-	std::string event_name = get_mouse_name((char*)"/proc/bus/input/devices");
+	// init ncurses
+	//std::unique_ptr<curse, curse::deleter> curse_ptr = curse::make_unique();
+	std::shared_ptr<curse> curse_ptr = curse::make_shared();
+	noecho();
+	curs_set(false);
+	keypad(curse_ptr->window, true);
+
+	std::string mouse_device = get_mouse_name((char*)"/proc/bus/input/devices");
 
 
-	rot.x = 0;
-	rot.y = 0;
-
-	pthread_t controls_id;
-	pthread_create(&controls_id, NULL, controls, &event_name);
-
+	pthread_t mouse_id;
+	pthread_create(&mouse_id, NULL, mouse, &mouse_device);
+	pthread_t keys_id;
+	pthread_create(&keys_id, NULL, keys, &curse_ptr);
 
 
-#if 0
+
+#if 0// ncurses mouse test
 	{
-		std::unique_ptr<curse, curse::deleter> holder = curse::make_unique();
+		std::unique_ptr<curse, curse::deleter> curse_ptr = curse::make_unique();
 		noecho();
 		curs_set(false);
-		keypad(holder->window, true);
+		keypad(curse_ptr->window, true);
 
 		mvprintw(1, 0, "Hello");
 		mvprintw(2, 3, "World!");
@@ -324,25 +469,38 @@ int main() {
 	}
 #endif
 
-
+	/*
+	 * setup framebuffer
+	 * use a unique_ptr to delete it for us
+	 */
 	std::unique_ptr<framebuf, framebuf::deleter> fb = framebuf::make_unique();
 	RGBT temp_rgbt = {255, 255, 255, 0};
 	pixel_ pix(0, 0, temp_rgbt);
 
-	double hfov = 90;//horizontal field of view
-	double vfov = (hfov * fb->vinfo.yres) / fb->vinfo.xres;
 
-	/*
-	 * there is a sphere at 000, with the radius = 5
-	 *  set the camera to point at that
-	 */
+	// start the loop
 	while(1) {
-		printf("draw\n");
 
-		v3d start(-13, 2, -3);
-		v3d dir(1, 0, 0);
-		dir.rotate(rot.y, v3d::Z);
-		dir.rotate(rot.x, -v3d::Y);
+		// check the controls set by other threads
+		assert(!pthread_mutex_lock(&quit_mutex));
+		if(quit) {
+			assert(!pthread_mutex_unlock(&quit_mutex));
+			break;
+		}
+		assert(!pthread_mutex_unlock(&quit_mutex));
+		assert(!pthread_mutex_lock(&direction_mutex));
+		v3d dir = direction;
+		assert(!pthread_mutex_unlock(&direction_mutex));
+		assert(!pthread_mutex_lock(&translation_mutex));
+		v3d start = translation;
+		assert(!pthread_mutex_unlock(&translation_mutex));
+		assert(!pthread_mutex_lock(&fov_mutex));
+		double hfov = fov;
+		assert(!pthread_mutex_unlock(&fov_mutex));
+
+		// setup the fov
+		double vfov = (hfov * fb->vinfo.yres) / fb->vinfo.xres;
+
 
 
 #pragma GCC diagnostic push
@@ -352,6 +510,7 @@ int main() {
 #pragma GCC diagnostic pop
 			static_cast<PIXEL*>(&pix)->x = &x;
 
+			// account for difference in angle of different pixels
 			double xr_on_2 = fb->vinfo.xres/2.0;
 			double angle = hfov * (x - xr_on_2) / (double)xr_on_2;
 			v3d pix_dir_x = v3d::rotate(dir, angle, v3d::Y);
@@ -362,6 +521,7 @@ int main() {
 #pragma GCC diagnostic pop
 				static_cast<PIXEL*>(&pix)->y = &y;
 
+				// angle of pixels, but for Y axis
 				double yr_on_2 = fb->vinfo.yres/2.0;
 				double angle = vfov * (y - yr_on_2) / (double)yr_on_2;
 				v3d pix_dir_xy = v3d::rotate(pix_dir_x, angle, v3d::Z);
@@ -381,6 +541,12 @@ int main() {
 						pix.colour.b = 0;
 						pix.colour.t = 0;
 					}
+					draw(fb.get(), &pix);
+				} else {
+					pix.colour.r = (int)(255 * x) / fb->vinfo.xres;
+					pix.colour.g = (int)(255 * y) / fb->vinfo.yres;
+					pix.colour.b = 0;
+					pix.colour.t = 0;
 					draw(fb.get(), &pix);
 				}
 			}
