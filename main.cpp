@@ -199,7 +199,7 @@ double fov = 90;
 pthread_mutex_t quit_mutex = PTHREAD_MUTEX_INITIALIZER;
 bool quit = false;
 
-const double units_per_sec = 0.5;
+const double units_per_sec = 2;
 
 
 void* keys(void *curse_shared_ptr) {
@@ -236,28 +236,28 @@ void* keys(void *curse_shared_ptr) {
 			case (int)'w':
 				delta = current_time - last_time;
 				assert(!pthread_mutex_lock(&translation_mutex));
-				translation += forward * units_per_sec / delta.count();
+				translation += forward * units_per_sec * delta.count();
 				assert(!pthread_mutex_unlock(&translation_mutex));
 				break;
 			case KEY_DOWN:
 			case (int)'s':
 				delta = current_time - last_time;
 				assert(!pthread_mutex_lock(&translation_mutex));
-				translation -= forward * units_per_sec / delta.count();
+				translation -= forward * units_per_sec * delta.count();
 				assert(!pthread_mutex_unlock(&translation_mutex));
 				break;
 			case KEY_RIGHT:
 			case (int)'d':
 				delta = current_time - last_time;
 				assert(!pthread_mutex_lock(&translation_mutex));
-				translation += right * units_per_sec / delta.count();
+				translation += right * units_per_sec * delta.count();
 				assert(!pthread_mutex_unlock(&translation_mutex));
 				break;
 			case KEY_LEFT:
 			case (int)'a':
 				delta = current_time - last_time;
 				assert(!pthread_mutex_lock(&translation_mutex));
-				translation -= right * units_per_sec / delta.count();
+				translation -= right * units_per_sec * delta.count();
 				assert(!pthread_mutex_unlock(&translation_mutex));
 				break;
 
