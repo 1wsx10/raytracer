@@ -264,13 +264,13 @@ void* keys(void *curse_shared_ptr) {
 			case (int)' ':
 				delta = current_time - last_time;
 				assert(!pthread_mutex_lock(&translation_mutex));
-				translation += up * units_per_sec / delta.count();
+				translation += up * units_per_sec * delta.count();
 				assert(!pthread_mutex_unlock(&translation_mutex));
 				break;
 			case (int)'c':
 				delta = current_time - last_time;
 				assert(!pthread_mutex_lock(&translation_mutex));
-				translation -= up * units_per_sec / delta.count();
+				translation -= up * units_per_sec * delta.count();
 				assert(!pthread_mutex_unlock(&translation_mutex));
 				break;
 
