@@ -512,6 +512,10 @@ int main() {
 		}
 
 
+		mvprintw(0, 0, "pos(%2.1f, %2.1f, %2.1f)", start.x, start.y, start.z);
+		mvprintw(1, 0, "dir(%2.1f, %2.1f, %2.1f)", dir.x, dir.y, dir.z);
+		refresh();
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"
 		// x gets converted to unsigned int, but all 
@@ -529,6 +533,9 @@ int main() {
 			for(int y = 0; y < fb->vinfo.yres && y < INT_MAX; y++) {
 #pragma GCC diagnostic pop
 				static_cast<PIXEL*>(&pix)->y = &y;
+
+				if(x <= 200 && y <= 32)
+					continue;
 
 				// angle of pixels, but for Y axis
 				double yr_on_2 = fb->vinfo.yres/2.0;
