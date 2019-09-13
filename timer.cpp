@@ -2,14 +2,12 @@
 
 using namespace std::chrono;
 
-timer::timer(std::string name)
-	: name(name),
-	type(timer::TYPE::PRINTING),
-	log_(nullptr),
-	start_time(high_resolution_clock::now()) {};
+timer::timer(std::string name) : timer(nullptr, name) {}
 
-timer::timer(std::shared_ptr<logger> log__)
-	: name(""),
+timer::timer(std::shared_ptr<logger> log__) : timer(log__, "") {}
+
+timer::timer(std::shared_ptr<logger> log__, std::string name) :
+	name(name),
 	type(timer::TYPE::LOGGING),
 	log_(log__),
 	start_time(high_resolution_clock::now()) {};

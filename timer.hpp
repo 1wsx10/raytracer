@@ -9,19 +9,23 @@
 #include "logger.h"
 
 class timer {
-		std::string name;
-		enum TYPE {
-			PRINTING,
-			LOGGING
-		} type;
-		std::shared_ptr<logger> log_;
+	static unsigned int count;
+
+	std::string name;
+	enum TYPE {
+		PRINTING,
+		LOGGING
+	} type;
+	std::shared_ptr<logger> log_;
 
 	public:
 		std::chrono::time_point<
 			std::chrono::high_resolution_clock> start_time;
 
+		timer();
 		timer(std::string name);
 		timer(std::shared_ptr<logger> log__);
+		timer(std::shared_ptr<logger> log__, std::string name);
 
 		~timer();
 
