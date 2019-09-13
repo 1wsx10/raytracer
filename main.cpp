@@ -390,10 +390,10 @@ int main(int argc, char **argv) {
 			if(strncmp(argv[i], arg_onerender, sizeof(arg_onerender)) == 0) {
 				printf("doing one render\n");
 				one_render = true;
-			} else {
-				printf("continuous render\n");
 			}
 		}
+
+		if(!one_render) printf("continuous render\n");
 	}
 
 
