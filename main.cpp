@@ -408,7 +408,7 @@ void* mouse(void *evt_name) {
 }
 
 
-int main() {
+int main(int argc, char **argv) {
 	timer main_timer("main timer");
 
 	// init ncurses
