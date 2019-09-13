@@ -6,21 +6,9 @@
 #include <iostream>
 #include <memory>
 
+#include "logger.h"
+
 using namespace std::chrono;
-
-class logger {
-	public:
-		struct data {
-			virtual std::ostream& append_to_ostream(std::ostream& os) const = 0;
-			friend std::ostream& operator<<(std::ostream& os, const data& dt);
-		};
-
-		void log_data(const data &dt);
-};
-
-std::ostream& operator<<(std::ostream& os, const logger::data& dt) {
-	return dt.append_to_ostream(os);
-}
 
 class timer {
 		std::string name;
