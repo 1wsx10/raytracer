@@ -1,4 +1,4 @@
-SOURCES=main.cpp libdraw.cpp logger.cpp
+SOURCES=main.cpp libdraw.cpp logger.cpp timer.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 DFILES=$(SOURCES:.cpp=.d)
 PROGRAM=a.out
