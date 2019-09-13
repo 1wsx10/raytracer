@@ -88,7 +88,10 @@ std::string get_mouse_name(char *devices_list) {
 
 	bool found_event_name = false;
 	std::string event_name;
+
+	assert(!pthread_mutex_lock(&quit_mutex));
 	do {
+		assert(!pthread_mutex_unlock(&quit_mutex));
 		FILE *stream;
 		//char devices_list[] = "/proc/bus/input/devices";
 
@@ -139,7 +142,12 @@ std::string get_mouse_name(char *devices_list) {
 			//  to free it unconditionally
 			free(line);
 		}
-	} while(false);
+
+
+
+		assert(!pthread_mutex_lock(&quit_mutex));
+	} while(!quit);
+	assert(!pthread_mutex_unlock(&quit_mutex));
 
 	if(found_event_name) {
 		//printf("found evt name!: '%s'\n", event_name.c_str());
@@ -160,10 +168,11 @@ void* keys(void *curse_shared_ptr) {
 
 	//std::chrono::time_point<std::chrono::steady_clock> start_time = std::chrono::steady_clock::now();
 	//std::chrono::duration<double> time_delta;
-	bool loop = true;
 
 	std::chrono::time_point<std::chrono::steady_clock> current_time = std::chrono::steady_clock::now();
+	assert(!pthread_mutex_lock(&quit_mutex));
 	do {
+		assert(!pthread_mutex_unlock(&quit_mutex));
 		//time_delta = std::chrono::steady_clock::now() - start_time;
 		//mvprintw(0, 0, "time delta: %.0f", time_delta);
 
@@ -246,15 +255,21 @@ void* keys(void *curse_shared_ptr) {
 			case KEY_EXIT:
 				assert(!pthread_mutex_lock(&quit_mutex));
 				quit = true;
-				loop = false;
-				assert(!pthread_mutex_unlock(&quit_mutex));
 				break;
 		}
 
-	} while(loop);
+		assert(!pthread_mutex_lock(&quit_mutex));
+	} while(!quit);
+	assert(!pthread_mutex_unlock(&quit_mutex));
 
 	return NULL;
 }
+
+
+
+
+
+
 
 void* mouse(void *evt_name) {
 	std::string event_name = *(std::string*)evt_name;
@@ -401,11 +416,19 @@ int main(int argc, char **argv) {
 
 	std::string mouse_device = get_mouse_name((char*)"/proc/bus/input/devices");
 
-
 	pthread_t mouse_id;
-	pthread_create(&mouse_id, NULL, mouse, &mouse_device);
 	pthread_t keys_id;
-	pthread_create(&keys_id, NULL, keys, &curse_ptr);
+	{
+		pthread_attr_t thread_attibutes;
+		pthread_attr_init(&thread_attibutes);
+		std::unique_ptr<pthread_attr_t, void(*)(void*)>
+			attr(&thread_attibutes, (void(*)(void*))pthread_attr_destroy);
+
+		pthread_attr_setdetachstate(attr.get(), PTHREAD_CREATE_JOINABLE);
+
+		pthread_create(&mouse_id, NULL, mouse, &mouse_device);
+		pthread_create(&keys_id, NULL, keys, &curse_ptr);
+	}
 
 
 
@@ -460,15 +483,10 @@ int main(int argc, char **argv) {
 
 
 	// start the loop
-	while(1) {
-
-		// check the controls set by other threads
-		assert(!pthread_mutex_lock(&quit_mutex));
-		if(quit) {
-			assert(!pthread_mutex_unlock(&quit_mutex));
-			break;
-		}
+	assert(!pthread_mutex_lock(&quit_mutex));
+	while(!quit) {
 		assert(!pthread_mutex_unlock(&quit_mutex));
+
 		assert(!pthread_mutex_lock(&direction_mutex));
 		v3d dir = direction;
 		assert(!pthread_mutex_unlock(&direction_mutex));
@@ -548,7 +566,19 @@ int main(int argc, char **argv) {
 				}
 			}
 		}
+
+		if(one_render) break;
+
+		assert(!pthread_mutex_lock(&quit_mutex));
 	}
+	assert(!pthread_mutex_unlock(&quit_mutex));
+
+	assert(!pthread_mutex_lock(&quit_mutex));
+	quit = true;
+	assert(!pthread_mutex_unlock(&quit_mutex));
+
+	pthread_join(mouse_id, nullptr);
+	pthread_join(keys_id, nullptr);
 
 	return EXIT_SUCCESS;
 }
