@@ -205,18 +205,18 @@ const double units_per_sec = 2;
 void* keys(void *curse_shared_ptr) {
 	std::shared_ptr<curse> curses_ptr = *(std::shared_ptr<curse>*)(curse_shared_ptr);
 
-	//time_point<steady_clock> start_time = steady_clock::now();
+	//std::chrono::time_point<std::chrono::steady_clock> start_time = std::chrono::steady_clock::now();
 	//std::chrono::duration<double> time_delta;
 	bool loop = true;
 
-	time_point<steady_clock> current_time = steady_clock::now();
+	std::chrono::time_point<std::chrono::steady_clock> current_time = std::chrono::steady_clock::now();
 	do {
-		//time_delta = steady_clock::now() - start_time;
+		//time_delta = std::chrono::steady_clock::now() - start_time;
 		//mvprintw(0, 0, "time delta: %.0f", time_delta);
 
 
-		time_point<steady_clock> last_time = current_time;
-		current_time = steady_clock::now();
+		std::chrono::time_point<std::chrono::steady_clock> last_time = current_time;
+		current_time = std::chrono::steady_clock::now();
 
 
 		int key = getch();
@@ -230,7 +230,7 @@ void* keys(void *curse_shared_ptr) {
 		v3d up = v3d::Y;
 		v3d right = v3d::cross(forward, up);
 
-		duration<double> delta;
+		std::chrono::duration<double> delta;
 		switch(key) {
 			case KEY_UP:
 			case (int)'w':
@@ -411,6 +411,8 @@ void* mouse(void *evt_name) {
 int main(int argc, char **argv) {
 	timer main_timer("main timer");
 
+
+
 	// init ncurses
 	//std::unique_ptr<curse, curse::deleter> curse_ptr = curse::make_unique();
 	std::shared_ptr<curse> curse_ptr = curse::make_shared();
@@ -452,10 +454,10 @@ int main(int argc, char **argv) {
 		mmask_t my_settings = ALL_MOUSE_EVENTS;
 		mousemask(my_settings, nullptr);
 
-		time_point<steady_clock> start_time = steady_clock::now();
+		std::chrono::time_point<std::chrono::steady_clock> start_time = std::chrono::steady_clock::now();
 		std::chrono::duration<double> time_delta;
 		do {
-			time_delta = steady_clock::now() - start_time;
+			time_delta = std::chrono::steady_clock::now() - start_time;
 			mvprintw(0, 0, "time delta: %.0f", time_delta);
 
 			MEVENT event;

@@ -8,8 +8,6 @@
 
 #include "logger.h"
 
-using namespace std::chrono;
-
 class timer {
 		std::string name;
 		enum TYPE {
@@ -19,7 +17,8 @@ class timer {
 		std::shared_ptr<logger> log_;
 
 	public:
-		time_point<high_resolution_clock> start_time;
+		std::chrono::time_point<
+			std::chrono::high_resolution_clock> start_time;
 
 		timer(std::string name);
 		timer(std::shared_ptr<logger> log__);
@@ -27,9 +26,12 @@ class timer {
 		~timer();
 
 		struct data : logger::data {
-			std::chrono::time_point<high_resolution_clock> start_time;
-			std::chrono::time_point<high_resolution_clock> end_time;
+			std::chrono::time_point<
+				std::chrono::high_resolution_clock> start_time;
+			std::chrono::time_point<
+				std::chrono::high_resolution_clock> end_time;
 
-			virtual std::ostream& append_to_ostream(std::ostream& os) const override;
+			virtual std::ostream&
+				append_to_ostream(std::ostream& os) const override;
 		};
 };

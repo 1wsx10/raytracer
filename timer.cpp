@@ -1,5 +1,7 @@
 #include "timer.hpp"
 
+using namespace std::chrono;
+
 timer::timer(std::string name)
 	: name(name),
 	type(timer::TYPE::PRINTING),
