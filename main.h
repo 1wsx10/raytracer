@@ -28,15 +28,15 @@
 #define IS_APPROX_0(X, DELTA) (abs(X) < (DELTA))
 
 
-pthread_mutex_t direction_mutex = PTHREAD_MUTEX_INITIALIZER;
+mutex direction_mutex("direction_mutex");
 v3d direction(1,0,0);
-pthread_mutex_t translation_mutex = PTHREAD_MUTEX_INITIALIZER;
+mutex translation_mutex("translation_mutex");
 v3d translation(-13, 2, -3);
 
-pthread_mutex_t fov_mutex = PTHREAD_MUTEX_INITIALIZER;
+mutex fov_mutex("fov_mutex");
 double fov = 90;
 
-//pthread_mutex_t quit_mutex = PTHREAD_MUTEX_INITIALIZER;
+//mutex quit_mutex("quit_mutex");
 mutex quit_mutex("quit flag");
 bool quit = false;
 
