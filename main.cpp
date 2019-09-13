@@ -89,11 +89,8 @@ std::string get_mouse_name(char *devices_list) {
 	bool found_event_name = false;
 	std::string event_name;
 
-	assert(!pthread_mutex_lock(&quit_mutex));
 	do {
-		assert(!pthread_mutex_unlock(&quit_mutex));
 		FILE *stream;
-		//char devices_list[] = "/proc/bus/input/devices";
 
 		if(!(stream = fopen(devices_list, "r"))) {
 			perror(devices_list);
@@ -133,7 +130,7 @@ std::string get_mouse_name(char *devices_list) {
 
 						// successfully found a thing
 						found_event_name = true;
-						break;
+						break;// reason for 'do {} while(false);'
 					}
 				}
 
@@ -145,9 +142,7 @@ std::string get_mouse_name(char *devices_list) {
 
 
 
-		assert(!pthread_mutex_lock(&quit_mutex));
-	} while(!quit);
-	assert(!pthread_mutex_unlock(&quit_mutex));
+	} while(false);
 
 	if(found_event_name) {
 		//printf("found evt name!: '%s'\n", event_name.c_str());
@@ -170,9 +165,9 @@ void* keys(void *curse_shared_ptr) {
 	//std::chrono::duration<double> time_delta;
 
 	std::chrono::time_point<std::chrono::steady_clock> current_time = std::chrono::steady_clock::now();
-	assert(!pthread_mutex_lock(&quit_mutex));
+	quit_mutex.lock("enter keys loop");
 	do {
-		assert(!pthread_mutex_unlock(&quit_mutex));
+	quit_mutex.unlock();
 		//time_delta = std::chrono::steady_clock::now() - start_time;
 		//mvprintw(0, 0, "time delta: %.0f", time_delta);
 
@@ -253,14 +248,15 @@ void* keys(void *curse_shared_ptr) {
 
 			case 'q':
 			case KEY_EXIT:
-				assert(!pthread_mutex_lock(&quit_mutex));
+				quit_mutex.lock("keys request quit");
 				quit = true;
+				quit_mutex.unlock();
 				break;
 		}
 
-		assert(!pthread_mutex_lock(&quit_mutex));
+		quit_mutex.lock("keys re-loop");
 	} while(!quit);
-	assert(!pthread_mutex_unlock(&quit_mutex));
+	quit_mutex.unlock();
 
 	return NULL;
 }
@@ -284,7 +280,7 @@ void* mouse(void *evt_name) {
 	if((fd = open(event_loc, O_RDONLY)) == -1) {
 		perror("opening device");
 		printf("%s\n", event_loc);
-		exit(EXIT_FAILURE);
+		return nullptr;
 	}
 
 	double x_deg = 0;
@@ -294,12 +290,12 @@ void* mouse(void *evt_name) {
 		//printf("time %ld.%06ld\ttype %d\tcode %d\tvalue %d\n",
 		//    ie.time.tv_sec, ie.time.tv_usec, ie.type, ie.code, ie.value);
 
-		assert(!pthread_mutex_lock(&quit_mutex));
+		quit_mutex.lock("mouse check for quit");
 		if(quit) {
-			assert(!pthread_mutex_unlock(&quit_mutex));
+			quit_mutex.unlock();
 			break;
 		}
-		assert(!pthread_mutex_unlock(&quit_mutex));
+		quit_mutex.unlock();
 
 		switch(ie.type) {
 			case EV_SYN:
@@ -380,6 +376,7 @@ void* mouse(void *evt_name) {
 
 
 int main(int argc, char **argv) {
+
 	timer main_timer("main timer");
 
 	bool one_render = false;
@@ -426,8 +423,8 @@ int main(int argc, char **argv) {
 
 		pthread_attr_setdetachstate(attr.get(), PTHREAD_CREATE_JOINABLE);
 
-		pthread_create(&mouse_id, NULL, mouse, &mouse_device);
-		pthread_create(&keys_id, NULL, keys, &curse_ptr);
+		pthread_create(&mouse_id, attr.get(), mouse, &mouse_device);
+		pthread_create(&keys_id, attr.get(), keys, &curse_ptr);
 	}
 
 
@@ -483,9 +480,9 @@ int main(int argc, char **argv) {
 
 
 	// start the loop
-	assert(!pthread_mutex_lock(&quit_mutex));
+	quit_mutex.lock("main enter loop");
 	while(!quit) {
-		assert(!pthread_mutex_unlock(&quit_mutex));
+		quit_mutex.unlock();
 
 		assert(!pthread_mutex_lock(&direction_mutex));
 		v3d dir = direction;
@@ -526,6 +523,7 @@ int main(int argc, char **argv) {
 			double xr_on_2 = fb->vinfo.xres/2.0;
 			double angle = hfov * (x - xr_on_2) / (double)xr_on_2;
 			v3d pix_dir_x = v3d::rotate(dir, angle, up);
+			v3d new_right = v3d::rotate(right, angle, up);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"
@@ -539,7 +537,7 @@ int main(int argc, char **argv) {
 				// angle of pixels, but for Y axis
 				double yr_on_2 = fb->vinfo.yres/2.0;
 				double angle = vfov * (y - yr_on_2) / (double)yr_on_2;
-				v3d pix_dir_xy = v3d::rotate(pix_dir_x, angle, right);
+				v3d pix_dir_xy = v3d::rotate(pix_dir_x, angle, new_right);
 				// TODO: use pythagoras to do both rotations in 1
 
 				unsigned int idx = 0;
@@ -569,13 +567,12 @@ int main(int argc, char **argv) {
 
 		if(one_render) break;
 
-		assert(!pthread_mutex_lock(&quit_mutex));
+		quit_mutex.lock("main re-loop");
 	}
-	assert(!pthread_mutex_unlock(&quit_mutex));
+	//quit_mutex.unlock();
 
-	assert(!pthread_mutex_lock(&quit_mutex));
 	quit = true;
-	assert(!pthread_mutex_unlock(&quit_mutex));
+	quit_mutex.unlock();
 
 	pthread_join(mouse_id, nullptr);
 	pthread_join(keys_id, nullptr);

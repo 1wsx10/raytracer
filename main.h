@@ -21,6 +21,7 @@
 #include <regex.h>
 
 #include <pthread.h>
+#include "mutex.hpp"
 
 
 #define DEBUG 1
@@ -35,7 +36,8 @@ v3d translation(-13, 2, -3);
 pthread_mutex_t fov_mutex = PTHREAD_MUTEX_INITIALIZER;
 double fov = 90;
 
-pthread_mutex_t quit_mutex = PTHREAD_MUTEX_INITIALIZER;
+//pthread_mutex_t quit_mutex = PTHREAD_MUTEX_INITIALIZER;
+mutex quit_mutex("quit flag");
 bool quit = false;
 
 #pragma GCC diagnostic push
