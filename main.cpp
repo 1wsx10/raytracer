@@ -179,9 +179,9 @@ void* keys(void *curse_shared_ptr) {
 		int key = getch();
 
 		// get the 3 unit vectors relative to direction
-		assert(!pthread_mutex_lock(&direction_mutex));
+		direction_mutex.lock("keys copy dir");
 		v3d forward = direction;
-		assert(!pthread_mutex_unlock(&direction_mutex));
+		direction_mutex.unlock();
 		// set forward vector to be not looking up or down
 		forward.y = 0; forward.normalise();
 		v3d up = v3d::Y;
@@ -192,56 +192,56 @@ void* keys(void *curse_shared_ptr) {
 			case KEY_UP:
 			case (int)'w':
 				delta = current_time - last_time;
-				assert(!pthread_mutex_lock(&translation_mutex));
+				translation_mutex.lock("keys press w");
 				translation += forward * units_per_sec * delta.count();
-				assert(!pthread_mutex_unlock(&translation_mutex));
+				translation_mutex.unlock();
 				break;
 			case KEY_DOWN:
 			case (int)'s':
 				delta = current_time - last_time;
-				assert(!pthread_mutex_lock(&translation_mutex));
+				translation_mutex.lock("keys press s");
 				translation -= forward * units_per_sec * delta.count();
-				assert(!pthread_mutex_unlock(&translation_mutex));
+				translation_mutex.unlock();
 				break;
 			case KEY_RIGHT:
 			case (int)'d':
 				delta = current_time - last_time;
-				assert(!pthread_mutex_lock(&translation_mutex));
+				translation_mutex.lock("keys press d");
 				translation += right * units_per_sec * delta.count();
-				assert(!pthread_mutex_unlock(&translation_mutex));
+				translation_mutex.unlock();
 				break;
 			case KEY_LEFT:
 			case (int)'a':
 				delta = current_time - last_time;
-				assert(!pthread_mutex_lock(&translation_mutex));
+				translation_mutex.lock("keys press a");
 				translation -= right * units_per_sec * delta.count();
-				assert(!pthread_mutex_unlock(&translation_mutex));
+				translation_mutex.unlock();
 				break;
 
 			case (int)' ':
 				delta = current_time - last_time;
-				assert(!pthread_mutex_lock(&translation_mutex));
+				translation_mutex.lock("keys press \" \"");
 				translation += up * units_per_sec * delta.count();
-				assert(!pthread_mutex_unlock(&translation_mutex));
+				translation_mutex.unlock();
 				break;
 			case (int)'c':
 				delta = current_time - last_time;
-				assert(!pthread_mutex_lock(&translation_mutex));
+				translation_mutex.lock("keys press c");
 				translation -= up * units_per_sec * delta.count();
-				assert(!pthread_mutex_unlock(&translation_mutex));
+				translation_mutex.unlock();
 				break;
 
 			case (int)'+':
 			case (int)'='://no shift held
-				assert(!pthread_mutex_lock(&fov_mutex));
+				fov_mutex.lock("keys press +");
 				fov *= 1.5;
-				assert(!pthread_mutex_unlock(&fov_mutex));
+				fov_mutex.unlock();
 				break;
 			case (int)'-':
 			case (int)'_'://shift held
-				assert(!pthread_mutex_lock(&fov_mutex));
+				fov_mutex.lock("keys press -");
 				fov /= 1.5;
-				assert(!pthread_mutex_unlock(&fov_mutex));
+				fov_mutex.unlock();
 				break;
 
 
@@ -359,13 +359,13 @@ void* mouse(void *evt_name) {
 		}
 
 		// set direction to be (1, 0, 0) rotated by x and y degrees
-		assert(!pthread_mutex_lock(&direction_mutex));
+		direction_mutex.lock("mouse rotate dir");
 
 		direction = 
 			v3d::rotate(v3d::X, y_deg, -v3d::Z)
 			.rotate(x_deg, -v3d::Y);
 
-		assert(!pthread_mutex_unlock(&direction_mutex));
+		direction_mutex.unlock();
 	}
 
 	return NULL;
@@ -484,15 +484,15 @@ int main(int argc, char **argv) {
 	while(!quit) {
 		quit_mutex.unlock();
 
-		assert(!pthread_mutex_lock(&direction_mutex));
+		direction_mutex.lock("main copy dir");
 		v3d dir = direction;
-		assert(!pthread_mutex_unlock(&direction_mutex));
-		assert(!pthread_mutex_lock(&translation_mutex));
+		direction_mutex.unlock();
+		translation_mutex.lock("main copy translation");
 		v3d start = translation;
-		assert(!pthread_mutex_unlock(&translation_mutex));
-		assert(!pthread_mutex_lock(&fov_mutex));
+		translation_mutex.unlock();
+		fov_mutex.lock("main copy fov");
 		double hfov = fov;
-		assert(!pthread_mutex_unlock(&fov_mutex));
+		fov_mutex.unlock();
 
 		// setup the fov
 		double vfov = (hfov * fb->vinfo.yres) / fb->vinfo.xres;
