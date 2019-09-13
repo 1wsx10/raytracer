@@ -11,7 +11,7 @@
 class timer {
 	static unsigned int count;
 
-	std::string name;
+	const char* name;
 	enum TYPE {
 		PRINTING,
 		LOGGING
@@ -22,10 +22,12 @@ class timer {
 		std::chrono::time_point<
 			std::chrono::high_resolution_clock> start_time;
 
+		/* printing types */
 		timer();
-		timer(std::string name);
+		timer(const char* name);
+		/* logging  types */
 		timer(std::shared_ptr<logger> log__);
-		timer(std::shared_ptr<logger> log__, std::string name);
+		timer(std::shared_ptr<logger> log__, const char* name);
 
 		~timer();
 

@@ -2,11 +2,17 @@
 
 using namespace std::chrono;
 
-timer::timer(std::string name) : timer(nullptr, name) {}
+timer::timer() : timer("timer") {};
 
-timer::timer(std::shared_ptr<logger> log__) : timer(log__, "") {}
+timer::timer(const char* name) :
+	name(name),
+	type(timer::TYPE::PRINTING),
+	log_(nullptr),
+	start_time(high_resolution_clock::now()) {};
 
-timer::timer(std::shared_ptr<logger> log__, std::string name) :
+timer::timer(std::shared_ptr<logger> log__) : timer(log__, nullptr) {}
+
+timer::timer(std::shared_ptr<logger> log__, const char* name) :
 	name(name),
 	type(timer::TYPE::LOGGING),
 	log_(log__),
@@ -26,7 +32,8 @@ timer::~timer()  {
 			seconds = end_time - start_time;
 			us = std::chrono::duration_cast<std::chrono::microseconds>(seconds);
 
-			printf("%s %10dus\n", name.c_str(), static_cast<int>(us.count()));
+			if(name)
+				printf("%s: %10dus\n", name, static_cast<int>(us.count()));
 			break;
 
 		case LOGGING:
@@ -41,7 +48,6 @@ std::ostream& timer::data::append_to_ostream(std::ostream& os) const {
 	std::chrono::duration<double> duration_seconds = end_time - start_time;
 	std::chrono::microseconds duration_us = std::chrono::duration_cast<std::chrono::microseconds>(duration_seconds);
 
-	// TODO better than this
 	os << duration_us.count();
 	return os;
 }

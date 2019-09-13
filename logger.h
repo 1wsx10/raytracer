@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <fstream>
 
 
 class logger {
@@ -10,5 +11,12 @@ class logger {
 			friend std::ostream& operator<<(std::ostream& os, const data& dt);
 		};
 
+		logger(std::ofstream of);
+		logger();
+		logger(std::string of_name);
+
 		void log_data(const data &dt);
+
+	private:
+		std::ofstream out_stream;
 };

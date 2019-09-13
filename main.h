@@ -23,7 +23,6 @@
 #include <pthread.h>
 #include "mutex.hpp"
 
-
 #define DEBUG 1
 #define IS_APPROX_0(X, DELTA) (abs(X) < (DELTA))
 
