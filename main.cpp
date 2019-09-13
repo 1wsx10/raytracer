@@ -74,12 +74,12 @@ HIT::type ray_cast(const v3d& start, const v3d& dir,
 
 			// 1 or more sol'ns
 			if(discriminant >= 0) {
-				hit = HIT::sphere;
 
 				double sqrt_discrim = sqrt(discriminant);
 				d = fmin(-lc_to_o + sqrt_discrim, -lc_to_o - sqrt_discrim);
 
-				if(d < min_dist) {
+				if(d < min_dist && d > 0) {
+					hit = HIT::sphere;
 					min_dist = d;
 					min_idx = i;
 				}
