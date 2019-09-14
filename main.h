@@ -16,6 +16,7 @@
 #include <linux/input.h>
 #include <fcntl.h>
 #include <cstdlib>
+#include <cstdio>
 
 #include <sys/types.h>
 #include <regex.h>
@@ -39,15 +40,43 @@ double fov = 90;
 mutex quit_mutex("quit flag");
 bool quit = false;
 
+struct script_keyframe {
+	int frame_num;
+	v3d trans;
+	v3d dir;
+	double fov;
+};
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-const-variable"
 // used in main
 
+const v3d pos_0(-13, 2, 0);
+const v3d pos_1(-6.5, 2, 0);
+const v3d pos_2(-7, 2, 3);
+const v3d pos_3(-2, 1, 12);
+const v3d pos_4(10, 2, 0);
+const v3d pos_5(6, 2, -6);
+const v3d pos_6(0, 2, -10);
+const size_t script_len = 7;
+// each frame_num should be greater than the last
+const script_keyframe script[] = {
+	{0, pos_0, v3d(1, 0, 0), 30},//dolly zoom :D
+	{15, pos_1, v3d(1, 0, 0), 90},//dolly zoom :D
+	{20, pos_2, (v3d::zero - pos_2).normalise(), 90},
+	{30, pos_3, (v3d::zero - pos_3).normalise(), 90},
+	{35, pos_4, (v3d::zero - pos_4).normalise(), 90},
+	{40, pos_5, (v3d::zero - pos_5).normalise(), 90},
+	{50, pos_6, (v3d::zero - pos_6).normalise(), 90},
+};
+
 const double units_per_sec = 2;
 const char arg_onerender[] = "--one_render";
+const char arg_scripted[] = "--scripted";
 
 #pragma GCC diagnostic pop
 
+bool curses_enabled = false;
 
 
 

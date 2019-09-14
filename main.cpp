@@ -379,38 +379,52 @@ int main(int argc, char **argv) {
 	timer main_timer("main timer");
 
 	bool one_render = false;
+	bool scripted_movement = false;
 
 	// do args
 	if(argc > 1) {
+		int num_args = 0;
 		for(int i = 1; i < argc; i++) {
 			if(strncmp(argv[i], arg_onerender, sizeof(arg_onerender)) == 0) {
 				printf("doing one render\n");
 				one_render = true;
+				num_args++;
+			} else if(strncmp(argv[i], arg_scripted, sizeof(arg_scripted)) == 0) {
+				printf("doing scripted movement\n");
+				scripted_movement = true;
+				num_args++;
 			}
 		}
 
+		if(num_args < argc-1) {
+			printf("invalid argument\n");
+			return EXIT_FAILURE;
+		}
 		if(!one_render) printf("continuous render\n");
+		if(!scripted_movement) printf("key movement\n");
 	}
 
 
 	// init ncurses
 	//std::unique_ptr<curse, curse::deleter> curse_ptr = curse::make_unique();
-	std::shared_ptr<curse> curse_ptr = curse::make_shared();
-	/* timeout sets the delay for getch()
-	 *  -1: block indefinitely
-	 *   0: don't block, give err instead
-	 *  >0: block for N ms, then give err
-	 */
-	timeout(-1);
-	// makes input return immediately on every char, rather than buffering a line
-	cbreak();
-	// don't print characters
-	noecho();
-	// don't show the cursor
-	curs_set(false);
-	keypad(curse_ptr->window, true);
+	std::shared_ptr<curse> curse_ptr;
+	if(!scripted_movement) {
+		curse_ptr = curse::make_shared();
+		/* timeout sets the delay for getch()
+		*  -1: block indefinitely
+		*   0: don't block, give err instead
+		*  >0: block for N ms, then give err
+		*/
+		timeout(-1);
+		// makes input return immediately on every char, rather than buffering a line
+		cbreak();
+		// don't print characters
+		noecho();
+		// don't show the cursor
+		curs_set(false);
+		keypad(curse_ptr->window, true);
+	}
 
-	std::string mouse_device = get_mouse_name((char*)"/proc/bus/input/devices");
 
 	pthread_t mouse_id;
 	pthread_t keys_id;
@@ -422,8 +436,12 @@ int main(int argc, char **argv) {
 
 		pthread_attr_setdetachstate(attr.get(), PTHREAD_CREATE_JOINABLE);
 
-		pthread_create(&mouse_id, attr.get(), mouse, &mouse_device);
-		pthread_create(&keys_id, attr.get(), keys, &curse_ptr);
+		if(!scripted_movement) {
+			std::string mouse_device = get_mouse_name((char*)"/proc/bus/input/devices");
+			pthread_create(&mouse_id, attr.get(), mouse, &mouse_device);
+			pthread_create(&keys_id, attr.get(), keys, &curse_ptr);
+			curses_enabled = true;
+		}
 	}
 
 
@@ -487,6 +505,9 @@ int main(int argc, char **argv) {
 
 
 	// start the loop
+	int frame_num = 0;
+	size_t key = 0;
+	script_keyframe before, after;
 	quit_mutex.lock("main enter loop");
 	while(!quit) {
 		quit_mutex.unlock();
@@ -494,16 +515,63 @@ int main(int argc, char **argv) {
 		// time this function please
 		timer frame_timer(frame_times_logger);
 
+		v3d dir, start;
+		double hfov=0;
+		if(scripted_movement) {
+			/* linear interp the keyframes so we get the info for this frame
+			 * set dir, start, hfov from scripted movement
+			 */
 
-		direction_mutex.lock("main copy dir");
-		v3d dir = direction;
-		direction_mutex.unlock();
-		translation_mutex.lock("main copy translation");
-		v3d start = translation;
-		translation_mutex.unlock();
-		fov_mutex.lock("main copy fov");
-		double hfov = fov;
-		fov_mutex.unlock();
+
+			// figure out which keyframes we are in
+			if(key+2 == script_len && script[key+1].frame_num == frame_num+1)
+				break;
+
+			assert(script[key].frame_num < script[key+1].frame_num);
+			if(script[key+1].frame_num == frame_num) {
+				key++;
+				before = script[key];
+				after = script[key+1];
+			}
+
+			// figure out the lerp
+			double after_proportion =
+				(double)(frame_num - script[key].frame_num) /
+				(script[key+1].frame_num - script[key].frame_num);
+			double before_proportion = 1 - after_proportion;
+
+			if(!(before_proportion <= 1 && after_proportion <= 1)) {
+				printf("\n===ERROR===\n");
+				printf("proportions b:%1.2f a:%1.2f\n",
+						before_proportion, after_proportion);
+				printf("key: %lu\n", key);
+				printf("frame_num: %d\n", frame_num);
+				printf("keyframe frame_num curr:%d next:%d\n",
+						script[key].frame_num, script[key+1].frame_num);
+				assert(false);
+			}
+
+			// actually set the vars
+			dir = script[key].dir * before_proportion +
+				script[key+1].dir * after_proportion;
+			dir.normalise();
+			start = script[key].trans * before_proportion +
+				script[key+1].trans * after_proportion;
+			hfov = script[key].fov * before_proportion +
+				script[key+1].fov * after_proportion;
+
+		} else {// use vars from input
+			direction_mutex.lock("main copy dir");
+			dir = direction;
+			direction_mutex.unlock();
+			translation_mutex.lock("main copy translation");
+			start = translation;
+			translation_mutex.unlock();
+			fov_mutex.lock("main copy fov");
+			hfov = fov;
+			fov_mutex.unlock();
+		}
+
 
 		// setup the fov
 		double vfov = (hfov * fb->vinfo.yres) / fb->vinfo.xres;
@@ -519,9 +587,11 @@ int main(int argc, char **argv) {
 		}
 
 
-		mvprintw(0, 0, "pos(%2.1f, %2.1f, %2.1f)", start.x, start.y, start.z);
-		mvprintw(1, 0, "dir(%2.1f, %2.1f, %2.1f)", dir.x, dir.y, dir.z);
-		refresh();
+		if(curses_enabled) {
+			mvprintw(0, 0, "pos(%2.1f, %2.1f, %2.1f)", start.x, start.y, start.z);
+			mvprintw(1, 0, "dir(%2.1f, %2.1f, %2.1f)", dir.x, dir.y, dir.z);
+			refresh();
+		}
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"
@@ -542,7 +612,7 @@ int main(int argc, char **argv) {
 #pragma GCC diagnostic pop
 				static_cast<PIXEL*>(&pix)->y = &y;
 
-				if(x <= 200 && y <= 32)
+				if(curses_enabled && x <= 200 && y <= 32)
 					continue;
 
 				// angle of pixels, but for Y axis
@@ -578,6 +648,7 @@ int main(int argc, char **argv) {
 
 		if(one_render) break;
 
+		frame_num++;
 		quit_mutex.lock("main re-loop");
 	}
 	//quit_mutex.unlock();
@@ -585,8 +656,10 @@ int main(int argc, char **argv) {
 	quit = true;
 	quit_mutex.unlock();
 
-	pthread_join(mouse_id, nullptr);
-	pthread_join(keys_id, nullptr);
+	if(!scripted_movement) {
+		pthread_join(mouse_id, nullptr);
+		pthread_join(keys_id, nullptr);
+	}
 
 	return EXIT_SUCCESS;
 }
