@@ -515,8 +515,7 @@ int main(int argc, char **argv) {
 		quit_mutex.unlock();
 
 		// time this function please
-		if(frame_times_logger)
-			timer frame_timer(frame_times_logger);
+		timer frame_timer = (frame_times_logger ? timer(frame_times_logger) : NULL);
 
 		v3d dir, start;
 		double hfov=0;

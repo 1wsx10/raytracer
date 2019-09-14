@@ -5,3 +5,5 @@ a.out
 vgcore*
 
 .*.swp
+
+*.csv
