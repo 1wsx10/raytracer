@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <cstdlib>
 #include <cstdio>
+#include <cmath>
 
 #include <sys/types.h>
 #include <regex.h>
@@ -51,8 +52,17 @@ struct script_keyframe {
 #pragma GCC diagnostic ignored "-Wunused-const-variable"
 // used in main
 
+double dolly_zoom_d(double width, double fov) {
+	return width /
+		(2 * tan(0.5 * (fov * PI / 180)));
+}
+
+/*
 const v3d pos_0(-13, 2, 0);
 const v3d pos_1(-6.5, 2, 0);
+*/
+const v3d pos_0 = v3d(-1,0,0) * dolly_zoom_d(10, 25);
+const v3d pos_1 = v3d(-1,0,0) * dolly_zoom_d(14, 90);
 const v3d pos_2(-7, 2, 3);
 const v3d pos_3(-2, 1, 12);
 const v3d pos_4(10, 2, 0);
@@ -61,7 +71,7 @@ const v3d pos_6(0, 2, -10);
 const size_t script_len = 7;
 // each frame_num should be greater than the last
 const script_keyframe script[] = {
-	{0, pos_0, v3d(1, 0, 0), 30},//dolly zoom :D
+	{0, pos_0, v3d(1, 0, 0), 25},//dolly zoom :D
 	{15, pos_1, v3d(1, 0, 0), 90},//dolly zoom :D
 	{20, pos_2, (v3d::zero - pos_2).normalise(), 90},
 	{30, pos_3, (v3d::zero - pos_3).normalise(), 90},
