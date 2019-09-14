@@ -496,11 +496,13 @@ int main(int argc, char **argv) {
 	pixel_ pix(0, 0, temp_rgbt);
 
 	// log file for the frame times
-	std::shared_ptr<logger> frame_times_logger;
+	std::shared_ptr<logger> frame_times_logger = nullptr;
 	{
 		std::ofstream frame_times_file("frame_times.csv", std::ios::out);
-		frame_times_file << "micro seconds" << std::endl;// title
-		frame_times_logger = std::make_shared<logger>(std::move(frame_times_file));
+		if(frame_times_file) {
+			frame_times_file << "micro seconds" << std::endl;// title
+			frame_times_logger = std::make_shared<logger>(std::move(frame_times_file));
+		}
 	}
 
 
@@ -513,7 +515,8 @@ int main(int argc, char **argv) {
 		quit_mutex.unlock();
 
 		// time this function please
-		timer frame_timer(frame_times_logger);
+		if(frame_times_logger)
+			timer frame_timer(frame_times_logger);
 
 		v3d dir, start;
 		double hfov=0;
