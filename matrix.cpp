@@ -2,6 +2,146 @@
 #include <utility>
 #include <cstring>
 
+
+/** m1d class
+ * pure virtual class, for m14d and m41d
+ * implements conversion to m41d and m14d
+ * implements conversion to/from v3d
+ */
+
+// conversions
+
+m1d::operator v3d&() {
+	static_assert(v3d::ensure_contiguous_data(),
+			"v3d should be contiguous");
+	return *reinterpret_cast<v3d*>(this);
+}
+
+m1d::operator const v3d&() const {
+	static_assert(v3d::ensure_contiguous_data(),
+			"v3d should be contiguous");
+	return *reinterpret_cast<const v3d*>(this);
+}
+
+
+
+/** m14d and m41d classes
+ *
+ */
+
+
+
+m41d operator*(const m44d& lhs, const m41d& rhs) {
+	m41d out(m1d::zero);
+	/*  [xxxx] * [x] = [x]
+	 *  [xxxx]   [x]   [x]
+	 *  [xxxx]   [x]   [x]
+	 *  [xxxx]   [x]   [x]
+	 */
+	for(size_t i = 0; i < 4; i++)
+		for(size_t k = 0; k < 4; k++)
+			out[i] += lhs.n[i][k] * rhs[k];
+
+	return out;
+}
+
+m14d m14d::operator*(const m44d& rhs) const {
+	m14d out(m1d::zero);
+	/*  [xxxx] * [xxxx] = [xxxx]
+	 *           [xxxx]
+	 *           [xxxx]
+	 *           [xxxx]
+	 */
+	for(size_t j = 0; j < 4; j++)
+		for(size_t k = 0; k < 4; k++)
+			out[j] += n[k] * rhs.n[k][j];
+
+	return out;
+}
+
+double m14d::operator*(const m41d& rhs) const {
+#if DO_SIMD
+	double out=0;
+	for(int i = 0; i < 4; i++)
+		out += n[i]*rhs[i];
+	return out;
+#else
+	return
+		n[0]*rhs[0] +
+		n[1]*rhs[1] +
+		n[2]*rhs[2] +
+		n[3]*rhs[3];
+#endif
+}
+
+
+
+
+// checks to see if we got the implicit operators right
+#if 0
+// these operators should never work
+void no_work() {
+	// (these ctors should work)
+	m44d m4x4 = m44d::unit;
+	m41d m4x1(m1d::zero);
+	m14d m1x4(m1d::zero);
+
+	// 4x1 * 4x4
+	auto result1 = m4x1 * m4x4;
+
+	// 4x4 * 1x4
+	auto result2 = m4x4 * m1x4;
+
+	// 4x1 * 4x1
+	auto result3 = m4x1 * m4x1;
+	
+	// 1x4 * 1x4
+	auto result4 = m1x4 * m1x4;
+}
+#endif
+
+#if 0
+//conversely, these should
+void work() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+	m44d m4x4 = m44d::unit;
+	m14d m1x4(m1d::zero);
+	m41d m4x1(m1d::zero);
+
+	m14d r1x4 = m1x4 * m4x4;
+
+	m41d r4x1 = m4x4 * m4x1;
+
+	double r1x1 = m1x4 * m4x1;
+
+	// 4x1 * 1x4
+	m4x4 = m4x1 * m1x4;
+
+	m14d from41(m4x1);
+	m41d from14(m1x4);
+
+	m14d asdf(m1d(1,2,3,4));
+	m41d asdf2(m1d(1,2,3,4));
+	asdf = m1d::zero;
+	asdf2 = m1d::zero;
+
+	m14d fdsa(m1d::zero);
+	m41d fdsa2(m1d::zero);
+
+	m14d fromvec1(v3d::zero, 1);
+	
+	vector sdfa(v3d::zero);
+	point fdsas(v3d::zero);
+#pragma GCC diagnostic pop
+}
+#endif
+
+
+
+
+
+
 inline double det2(double a, double b, double c, double d) {
 	return a*d - b*c;
 }
@@ -142,13 +282,18 @@ m44d m44d::operator-() const {
 // multiplication
 
 #include <cstring>
-m44d m44d::operator*(const m44d &other) const {
+m44d m44d::operator*(const m44d &rhs) const {
 	m44d ret = m44d::zero;
 
-	for(int i = 0; i < 4; i++)
-		for(int j = 0; j < 4; j++)
-			for(int k = 0; k < 4; k++)
-				ret.n[i][j] += n[k][j] * other.n[i][k];
+	/*  [xxx] = [xxx] * [xxx]
+	 *  [xxx]   [xxx]   [xxx]
+	 *  [xxx]   [xxx]   [xxx]
+	 */
+
+	for(int i = 0; i < 4; i++)     //row in dest
+		for(int j = 0; j < 4; j++)   //col in dest
+			for(int k = 0; k < 4; k++) //idx of val in current row/col
+				ret.n[i][j] += n[i][k] * rhs.n[k][j];
 
 	return ret;
 }

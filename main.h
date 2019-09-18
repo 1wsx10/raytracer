@@ -4,6 +4,7 @@
 #include "lib/write_screen/drawlib.h"
 #include "lib/vector/vector.h"
 #include "timer.hpp"
+#include "matrix.hpp"
 
 #include <cassert>
 #include <climits>
@@ -31,8 +32,10 @@
 
 mutex direction_mutex("direction_mutex");
 v3d direction(1,0,0);
+m44d rotate_tx;
 mutex translation_mutex("translation_mutex");
 v3d translation(-13, 2, -3);
+
 
 mutex fov_mutex("fov_mutex");
 double fov = 90;

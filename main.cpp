@@ -361,9 +361,17 @@ void* mouse(void *evt_name) {
 		// set direction to be (1, 0, 0) rotated by x and y degrees
 		direction_mutex.lock("mouse rotate dir");
 
+		// rotate direction
 		direction = 
 			v3d::rotate(v3d::X, y_deg, -v3d::Z)
 			.rotate(x_deg, -v3d::Y);
+
+		// create a transformation matrix that will rotate any vector
+		// the same way as rotating the above vector
+		rotate_tx = m44d::make_transformation([=](const v3d& to_rotate) {
+				return vector(v3d::rotate(to_rotate, y_deg, -v3d::Z)
+				.rotate(x_deg, -v3d::Y));
+				});
 
 		direction_mutex.unlock();
 	}
@@ -572,6 +580,11 @@ int main(int argc, char **argv) {
 			fov_mutex.lock("main copy fov");
 			hfov = fov;
 			fov_mutex.unlock();
+		}
+
+		m44d camera_transform;
+		{
+			// set up camera transformation mutex
 		}
 
 
