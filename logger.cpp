@@ -1,4 +1,4 @@
-#include "logger.h"
+#include "logger.hpp"
 
 
 logger::logger(std::ofstream out) : out_stream(std::move(out)) {};

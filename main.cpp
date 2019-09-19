@@ -1,4 +1,4 @@
-#include "main.h"
+#include "main.hpp"
 
 
 /** ray_cast to find out if a ray intersects with a sphere
