@@ -109,7 +109,7 @@ m41d operator*(const m44d& lhs, const m41d& rhs) {
 	 */
 	for(size_t i = 0; i < 4; i++)
 		for(size_t k = 0; k < 4; k++)
-			out[i] += lhs.n[i][k] * rhs[k];
+			out[i] += lhs[i][k] * rhs[k];
 
 	return out;
 }
@@ -210,6 +210,19 @@ void work() {
 
 
 
+
+m44d m44d::make_transformation(
+		const v3d& i, const v3d& j, const v3d& k) {
+	m44d out = m44d::unit;
+
+	for(int idx = 0; idx < 3; idx++) {
+		out.n[0][idx] = i[idx];
+		out.n[1][idx] = j[idx];
+		out.n[2][idx] = k[idx];
+	}
+
+	return out;
+}
 
 inline double det2(double a, double b, double c, double d) {
 	return a*d - b*c;

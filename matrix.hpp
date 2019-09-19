@@ -22,10 +22,7 @@ class m44d {
 		 * @return the transformation matrix for t
 		 */
 		static m44d make_transformation(
-				const m41d& i,
-				const m41d& j,
-				const m41d& k
-				);
+				const v3d& i, const v3d& j, const v3d& k);
 
 		/** create a transformation matrix.
 		 * where t is the transformation you want to encode
@@ -62,6 +59,11 @@ class m44d {
 
 		m44d& operator*=(double);
 		m44d& operator/=(double);
+
+		// implicit double[][] conversion
+		using double_arr = double[4];
+		constexpr operator double_arr*() { return n; };
+		constexpr operator const double_arr*() const { return n; };
 };
 
 template<typename Func>
