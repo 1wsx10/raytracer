@@ -116,6 +116,25 @@ const m14d& m41d::transposed() const {
 	return static_cast<const m14d&>(*this);
 }
 
+// arithmetic with self
+m41d m41d::operator+(m41d other) const {
+	other += *this;
+	return other;
+}
+m41d m41d::operator-(m41d other) const {
+	other -= *this;
+	return other;
+}
+m41d& m41d::operator+=(const m41d &other) {
+	for(int i = 0; i < 4; i++)
+		n[i] += other[i];
+	return *this;
+}
+m41d& m41d::operator-=(const m41d &other) {
+	for(int i = 0; i < 4; i++)
+		n[i] -= other[i];
+	return *this;
+}
 
 m41d operator*(const m44d& lhs, const m41d& rhs) {
 	m41d out(m1d::zero);
@@ -166,6 +185,26 @@ m41d& m14d::transposed() {
 
 const m41d& m14d::transposed() const {
 	return static_cast<const m41d&>(*this);
+}
+
+// arithmetic with self
+m14d m14d::operator+(m14d other) const {
+	other += *this;
+	return other;
+}
+m14d m14d::operator-(m14d other) const {
+	other -= *this;
+	return other;
+}
+m14d& m14d::operator+=(const m14d &other) {
+	for(int i = 0; i < 4; i++)
+		n[i] += other[i];
+	return *this;
+}
+m14d& m14d::operator-=(const m14d &other) {
+	for(int i = 0; i < 4; i++)
+		n[i] -= other[i];
+	return *this;
 }
 
 

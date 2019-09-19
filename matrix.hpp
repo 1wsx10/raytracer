@@ -143,6 +143,12 @@ class m41d : public m1d {
 		m14d& transposed();
 		const m14d& transposed() const;
 
+		// arithmetic with self
+		m41d operator+(m41d) const;
+		m41d operator-(m41d) const;
+		m41d& operator+=(const m41d&);
+		m41d& operator-=(const m41d&);
+
 		// m44d * m41d
 		friend m41d operator*(const m44d&, const m41d&);
 		// m41d * m14d
@@ -200,6 +206,12 @@ class m14d : public m1d {
 
 		m41d& transposed();
 		const m41d& transposed() const;
+
+		// arithmetic with self
+		m14d operator+(m14d) const;
+		m14d operator-(m14d) const;
+		m14d& operator+=(const m14d&);
+		m14d& operator-=(const m14d&);
 
 		// m14d * m44d
 		m14d operator*(const m44d& rhs) const;
