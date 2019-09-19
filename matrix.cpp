@@ -151,7 +151,25 @@ m44d m41d::operator*(const m14d& rhs) {
 /** m14d class
  *
  */
+// assignment op
+m14d& m14d::operator=(const m1d &from) {
+	for(int i = 0; i < 4; i++)
+		n[i] = from[i];
+	return *this;
+}
 
+// transpose (turn to m41d)
+// we can just use the m1d explicit conversion op (which aliases)
+m41d& m14d::transposed() {
+	return static_cast<m41d&>(*this);
+}
+
+const m41d& m14d::transposed() const {
+	return static_cast<const m41d&>(*this);
+}
+
+
+// multiply with 4x4
 m14d m14d::operator*(const m44d& rhs) const {
 	m14d out(m1d::zero);
 	/*  [xxxx] * [xxxx] = [xxxx]
@@ -166,8 +184,10 @@ m14d m14d::operator*(const m44d& rhs) const {
 	return out;
 }
 
+// multiply with 4x1
 double m14d::operator*(const m41d& rhs) const {
-#if DO_SIMD
+#if 1
+	// simd version
 	double out=0;
 	for(int i = 0; i < 4; i++)
 		out += n[i]*rhs[i];
