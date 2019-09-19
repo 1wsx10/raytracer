@@ -78,6 +78,7 @@ m1d::operator const v3d&() const {
 }
 
 // convert to m14d
+// there is no difference, so we can just alias
 m1d::operator m14d&() {
 	return static_cast<m14d&>(*this);
 }
@@ -94,10 +95,26 @@ m1d::operator const m41d&() const {
 
 
 
-/** m14d and m41d classes
- *
+/** m41d class
+ *  parent of vector and point
  */
 
+// assignment operator
+m41d& m41d::operator=(const m1d &from) {
+	for(int i = 0; i < 4; i++)
+		n[i] = from[i];
+	return *this;
+}
+
+// transpose (turn to m14d)
+// we can just use the m1d explicit conversion op (which aliases)
+m14d& m41d::transposed() {
+	return static_cast<m14d&>(*this);
+}
+
+const m14d& m41d::transposed() const {
+	return static_cast<const m14d&>(*this);
+}
 
 
 m41d operator*(const m44d& lhs, const m41d& rhs) {
@@ -113,6 +130,27 @@ m41d operator*(const m44d& lhs, const m41d& rhs) {
 
 	return out;
 }
+
+m44d m41d::operator*(const m14d& rhs) {
+	m44d out;
+	/*  [x] * [xxxx] = [xxxx]
+	 *  [x]            [xxxx]
+	 *  [x]            [xxxx]
+	 *  [x]            [xxxx]
+	 */
+
+	for(int i = 0; i < 4; i++)     //row in dest
+		for(int j = 0; j < 4; j++)   //col in dest
+			// k is always 1
+			//for(int k = 0; k < 4; k++) //idx of val in current row/col
+				out[i][j] = n[i] * rhs[j];
+
+	return out;
+}
+
+/** m14d class
+ *
+ */
 
 m14d m14d::operator*(const m44d& rhs) const {
 	m14d out(m1d::zero);

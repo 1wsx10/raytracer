@@ -131,10 +131,13 @@ class point;
 class m41d : public m1d {
 	public:
 
-		m41d(void);
-		explicit m41d(m1d&);
+		m41d(void) {};
+		constexpr explicit m41d(m1d &from) : m1d(from) {};
 		constexpr m41d(const v3d& from, const double& w): m1d(from, w) {}
-		constexpr m41d(const double& a, const double& b, const double& c, const double& d): m1d(a,b,c,d) {};
+		constexpr m41d(const double& a,
+		               const double& b,
+		               const double& c,
+		               const double& d): m1d(a,b,c,d) {};
 		m41d& operator=(const m1d&);
 
 		m14d& transposed();
@@ -189,8 +192,8 @@ class m14d : public m1d {
 	public:
 
 
-		m14d(void);
-		explicit m14d(m1d&);
+		m14d(void) {};
+		constexpr explicit m14d(m1d &from) : m1d(from) {};
 		constexpr m14d(const v3d &from, const double& w) : m1d(from, w) {};
 		constexpr m14d(const double& a, const double& b, const double& c, const double& d): m1d(a,b,c,d) {};
 		m14d& operator=(const m1d&);
