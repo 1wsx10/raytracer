@@ -5,12 +5,66 @@
 
 /** m1d class
  * pure virtual class, for m14d and m41d
+ *   (not actually pure virtual)
  * implements conversion to m41d and m14d
  * implements conversion to/from v3d
  */
+const m1d m1d::zero = {0,0,0,0};
+
+
+// 'correct' homogeneous coordinates
+template<bool check>
+m1d& m1d::correct() {
+	if(check && n[3] == 1) {
+		return *this;
+	}
+
+	*this /= n[3];
+	return *this;
+}
+template<bool check>
+m1d m1d::corrected() const {
+	if(check && n[3] == 1) {
+		return *this;
+	}
+
+	return *this / n[3];
+}
+
+void declare_types() {
+	m1d asdf(5,3,2,1);
+	asdf.correct<true>();
+	asdf.correct<false>();
+	asdf.corrected<true>();
+	asdf.corrected<false>();
+}
+
+// maths with scalars
+m1d m1d::operator*(const double &rhs) const {
+	m1d out;
+	for(int i = 0; i < 4; i++)
+		out[i] = n[i] * rhs;
+	return out;
+}
+m1d& m1d::operator*=(const double &rhs) {
+	for(int i = 0; i < 4; i++)
+		n[i] *= rhs;
+	return *this;
+}
+m1d m1d::operator/(const double &rhs) const {
+	m1d out;
+	for(int i = 0; i < 4; i++)
+		out[i] = n[i] / rhs;
+	return out;
+}
+m1d& m1d::operator/=(const double &rhs) {
+	for(int i = 0; i < 4; i++)
+		n[i] /= rhs;
+	return *this;
+}
 
 // conversions
-
+// to v3d
 m1d::operator v3d&() {
 	static_assert(v3d::ensure_contiguous_data(),
 			"v3d should be contiguous");
@@ -21,6 +75,21 @@ m1d::operator const v3d&() const {
 	static_assert(v3d::ensure_contiguous_data(),
 			"v3d should be contiguous");
 	return *reinterpret_cast<const v3d*>(this);
+}
+
+// convert to m14d
+m1d::operator m14d&() {
+	return static_cast<m14d&>(*this);
+}
+m1d::operator const m14d&() const {
+	return *static_cast<const m14d*>(this);
+}
+// convert to m41d
+m1d::operator m41d&() {
+	return static_cast<m41d&>(*this);
+}
+m1d::operator const m41d&() const {
+	return *static_cast<const m41d*>(this);
 }
 
 

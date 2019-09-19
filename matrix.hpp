@@ -81,15 +81,26 @@ class m1d {
 
 		m1d(void) {};
 		// from provided doubles
-		constexpr m1d(const double& a, const double& b, const double& c, const double& d) : n{a,b,c,d} {};
-		constexpr m1d(const double& a, const double& b, const double& c) : m1d(a,b,c,1) {};
+		constexpr m1d(const double& a,
+		              const double& b,
+		              const double& c,
+		              const double& d) : n{a,b,c,d} {};
 		// from v3d
 		constexpr m1d(const v3d& from) : m1d(from, 1) {};
-		constexpr m1d(const v3d& from, const double& w) : m1d(from.x, from.y, from.z, w) {};
+		constexpr m1d(const v3d& from, const double& w)
+		              : m1d(from.x, from.y, from.z, w) {};
 
 		// 'correct' homogeneous coordinates
+		template<bool check>
 		m1d& correct();
+		template<bool check>
 		m1d corrected() const;
+
+		// maths with scalars
+		m1d operator*(const double&) const;
+		m1d& operator*=(const double&);
+		m1d operator/(const double&) const;
+		m1d& operator/=(const double&);
 
 		// convert to v3d
 		operator v3d&();
