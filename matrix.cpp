@@ -210,7 +210,18 @@ void work() {
 
 
 
+// constants
 
+const m44d m44d::zero = {.n={{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}}};
+const m44d m44d::unit = {
+	.n={
+		{1,0,0,0},
+		{0,1,0,0},
+		{0,0,1,0},
+		{0,0,0,1}
+}};
+
+// functions
 m44d m44d::make_transformation(
 		const v3d& i, const v3d& j, const v3d& k) {
 	m44d out = m44d::unit;
@@ -224,10 +235,12 @@ m44d m44d::make_transformation(
 	return out;
 }
 
+// used for m44d::det();
 inline double det2(double a, double b, double c, double d) {
 	return a*d - b*c;
 }
 
+// used for m44d::det();
 inline double det3(
 		double a, double b, double c,
 		double d, double e, double f,
@@ -240,6 +253,7 @@ inline double det3(
 	return ret;
 }
 
+// determinant
 double m44d::det() const {
 	//TODO better determinant, LU algorithm
 	double det = 0;
@@ -286,6 +300,7 @@ bool m44d::inverse(m44d &out) {
 	return true;
 }
 
+// transpose it in place... (swap rows & columns)
 m44d& m44d::transpose() {
 	/* we are swapping all values that are
 	 * not on the leading diagonal, also need
@@ -305,6 +320,7 @@ m44d& m44d::transpose() {
 	return *this;
 }
 
+// transpose but make a copy first
 m44d m44d::transposition(const m44d &other) {
 	m44d ret;
 
@@ -315,19 +331,9 @@ m44d m44d::transposition(const m44d &other) {
 	return ret;
 }
 
-// constants
-
-const m44d m44d::zero = {.n={{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}}};
-const m44d m44d::unit = {
-	.n={
-		{1,0,0,0},
-		{0,1,0,0},
-		{0,0,1,0},
-		{0,0,0,1}
-}};
+// m44d operators (non scalar)
 
 // addition
-
 m44d& m44d::operator+=(const m44d &other) {
 	for(int i = 0; i < 4*4; i++)
 		((double*)n)[i] += ((double*)other.n)[i];
@@ -355,12 +361,6 @@ m44d m44d::operator-(const m44d &other) const {
 	return ret;
 }
 
-// negation
-
-m44d m44d::operator-() const {
-	return -1 * *this;
-}
-
 // multiplication
 
 #include <cstring>
@@ -385,9 +385,15 @@ m44d& m44d::operator*=(const m44d &other) {
 	return *this;
 }
 
+// negation
+m44d m44d::operator-() const {
+	return -1 * *this;
+}
+
+
+// scalar operators
 
 // scalar multiplication
-
 m44d m44d::operator*(double val) const {
 	m44d ret = *this;
 	ret *= val;

@@ -66,6 +66,7 @@ class m44d {
 		constexpr operator const double_arr*() const { return n; };
 };
 
+// lambda function support for make_tx
 template<typename Func>
 m44d m44d::make_transformation(Func t) {
 	return m44d::make_transformation(
@@ -74,6 +75,9 @@ m44d m44d::make_transformation(Func t) {
 	    t(v3d::Z)
 	    );
 }
+
+
+
 
 class m1d {
 	public:
