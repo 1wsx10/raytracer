@@ -6,7 +6,7 @@
 #include <iostream>
 #include <memory>
 
-#include "logger.h"
+#include "logger.hpp"
 
 class timer {
 	static unsigned int count;
