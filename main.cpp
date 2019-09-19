@@ -584,7 +584,16 @@ int main(int argc, char **argv) {
 
 		m44d camera_transform;
 		{
-			// set up camera transformation mutex
+			// set up camera transformation matrix
+			direction_mutex.lock("main copy dir for tx");
+			camera_transform = rotate_tx;
+			direction_mutex.unlock();
+
+			m44d translation = m44d::unit;
+			for(int i = 0; i < 3; i++)
+				translation[i][3] += start[i];
+
+			camera_transform *= translation;
 		}
 
 
@@ -596,7 +605,7 @@ int main(int argc, char **argv) {
 		v3d right;
 		v3d up = v3d::Y;
 		{
-			v3d forward = dir;;
+			v3d forward = dir;
 			forward.y = 0; forward.normalise();
 			right = v3d::cross(forward, up);
 		}
