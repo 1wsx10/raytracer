@@ -1,7 +1,7 @@
-SOURCES=main.cpp libdraw.cpp logger.cpp timer.cpp mutex.cpp matrix.cpp
+SOURCES=test_matrix.cpp ../matrix.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 DFILES=$(SOURCES:.cpp=.d)
-PROGRAM=a.out
+PROGRAM=test_matrix
 DFILERULES=-MMD -MP
 # remove pedantic. this uses FB code, portability is already out the window
 #CFLAGS= -O0 -std=c++2a -Wall $(DFILERULES)
@@ -11,15 +11,15 @@ DFILERULES=-MMD -MP
 CFLAGS= -g -std=c++2a -Wall $(DFILERULES)
 LDFLAGS=$(CFLAGS) -lncurses -lm -pthread
 CC=g++
-DOT_A_FILES= lib/vector/libvector.a lib/write_screen/libdraw.a
-INC= lib/
+DOT_A_FILES= ../lib/vector/libvector.a ../lib/write_screen/libdraw.a
+INC= ../lib/
 
 # "lib/vector/libvector.a" becomes "-Llib/vector/"
 L=$(addprefix -L,$(dir $(DOT_A_FILES)))
 # "lib/vector/libvector.a" becomes "-lvector"
 l=$(addprefix -l,$(notdir $(basename $(subst /lib,/,$(DOT_A_FILES)))))
 
-.PHONY: all clean test locate_headers print-% SAY_COMPILING SAY_LINKING
+.PHONY: all clean locate_headers print-% SAY_COMPILING SAY_LINKING
 .SUFFIXES:#remove all suffixes
 .SUFFIXES: .cpp .h .o .a #define our own
 
@@ -51,12 +51,6 @@ $(DOT_A_FILES):
 	@echo
 	@echo '===================='
 	make $(notdir $@) -C $(dir $@)
-
-test:
-	make -C test_matrix/
-	@echo
-	@echo "=======test======="
-	test_matrix/test_matrix
 
 -include $(DFILES)
 
