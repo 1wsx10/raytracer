@@ -430,6 +430,15 @@ m44d m44d::transposition(const m44d &other) {
 
 // m44d operators (non scalar)
 
+// equality check
+bool m44d::operator==(const m44d &other) const {
+	for(int i = 0; i < 4; i++)
+		for(int j = 0; j < 4; j++)
+			if(other[i][j] != n[i][j])
+				return false;
+	return true;
+}
+
 // addition
 m44d& m44d::operator+=(const m44d &other) {
 	for(int i = 0; i < 4*4; i++)

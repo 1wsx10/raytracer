@@ -41,6 +41,8 @@ class m44d {
 		m44d& transpose();
 		static m44d transposition(const m44d&);
 
+		bool operator==(const m44d&) const;
+
 		m44d operator+(const m44d&) const;
 		m44d& operator+=(const m44d&);
 

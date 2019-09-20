@@ -11,7 +11,7 @@ DFILERULES=-MMD -MP
 CFLAGS= -g -std=c++2a -Wall $(DFILERULES)
 LDFLAGS=$(CFLAGS) -lncurses -lm -pthread
 CC=g++
-DOT_A_FILES= ../lib/vector/libvector.a ../lib/write_screen/libdraw.a
+DOT_A_FILES= ../lib/vector/libvector.a /lib/libboost_test_exec_monitor.a
 INC= ../lib/
 
 # "lib/vector/libvector.a" becomes "-Llib/vector/"
