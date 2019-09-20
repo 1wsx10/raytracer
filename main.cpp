@@ -381,6 +381,107 @@ void* mouse(void *evt_name) {
 
 
 
+template<typename T>
+struct array_2d {
+	const size_t N;
+	public:
+		std::unique_ptr<T[]> arr;
+
+		constexpr array_2d(size_t n, size_t m):
+			N(n),
+			arr(std::make_unique<T[]>(n * m)) {};
+
+		// allow arr operator for first idx
+		T* operator[](size_t i) {
+			return arr.get() + i*N;
+		}
+
+		// have the interface of a unique_ptr
+		operator std::unique_ptr<T[]>() {
+			return arr;
+		}
+};
+
+
+#if 0
+/** makes a pixel array for a rectillinear projection
+ *
+ * creates an array of vectors of unit length, each correspoinding to
+ * a pixel in a rectillinear projection.
+ * the direction everything points to is (1,0,0)
+ *
+ * @param x      x resolution
+ * @param y      y resolution
+ * @param hfov   horizontal fov: must be <= 180
+ *
+ * @returns   a struct containing a unique_ptr,
+ *            but can be indexed up to x and y to retrieve a pixel
+ */
+array_2d<v3d> make_pixel_arr(size_t x, size_t y, double hfov) {
+	assert(fov < 180);
+	array_2d<v3d> out(x, y);
+
+	/*
+	 *             x
+	 *     point -----
+	 *           \   |
+	 *            \  |1
+	 *             \θ|
+	 *              \|
+	 *              start
+	 *
+	 * tan(θ) = o/a
+	 * x = tan(fov/2)
+	 */
+
+	const double vfov = hfov * y / x;
+
+	const double start_x = tan((PI/180) * hfov/2);
+	const double start_y = tan((PI/180) * vfov/2);
+
+	for(size_t i = 0; i < x; i++)
+		for(size_t j = 0; j < y; j++) {
+			out[i][j] = v3d::normalise(v3d(1,
+						start_y + 2*start_y*j,
+						start_x + 2*start_x*i));
+		}
+
+	return out;
+}
+#endif
+
+// temp version just using malloc for simplicity
+v3d* make_pixel_arr(size_t x, size_t y, double hfov) {
+	assert(fov < 180);
+	v3d *out = reinterpret_cast<v3d*>(malloc(sizeof(v3d) * x * y));
+
+	/*
+	 *             x
+	 *     point -----
+	 *           \   |
+	 *            \  |1
+	 *             \θ|
+	 *              \|
+	 *              start
+	 *
+	 * tan(θ) = o/a
+	 * x = tan(fov/2)
+	 */
+
+	const double vfov = hfov * y / x;
+
+	const double start_x = tan((PI/180) * hfov/2);
+	const double start_y = tan((PI/180) * vfov/2);
+
+	for(size_t i = 0; i < x; i++)
+		for(size_t j = 0; j < y; j++) {
+			out[i*x+j] = v3d::normalise(v3d(1,
+						start_y + 2*start_y*j,
+						start_x + 2*start_x*i));
+		}
+
+	return out;
+}
 
 
 int main(int argc, char **argv) {
@@ -416,7 +517,7 @@ int main(int argc, char **argv) {
 	// init ncurses
 	//std::unique_ptr<curse, curse::deleter> curse_ptr = curse::make_unique();
 	std::shared_ptr<curse> curse_ptr;
-	if(!scripted_movement) {
+	if(!scripted_movement) {// init curses
 		curse_ptr = curse::make_shared();
 		/* timeout sets the delay for getch()
 		*  -1: block indefinitely
@@ -436,7 +537,7 @@ int main(int argc, char **argv) {
 
 	pthread_t mouse_id;
 	pthread_t keys_id;
-	{
+	{// start mouse and keyboard threads
 		pthread_attr_t thread_attibutes;
 		pthread_attr_init(&thread_attibutes);
 		std::unique_ptr<pthread_attr_t, void(*)(void*)>
@@ -502,6 +603,17 @@ int main(int argc, char **argv) {
 	std::unique_ptr<framebuf, framebuf::deleter> fb = framebuf::make_unique();
 	RGBT temp_rgbt = {255, 255, 255, 0};
 	pixel_ pix(0, 0, temp_rgbt);
+
+
+	// set up array of different directions for each pixel
+	/*
+	array_2d<v3d>
+		pixel_dirs = make_pixel_arr(
+				fb->vinfo.xres, fb->vinfo.yres, 90);
+				*/
+
+	v3d *pixel_dirs = make_pixel_arr(fb->vinfo.xres, fb->vinfo.yres, 90);
+
 
 	// log file for the frame times
 	std::shared_ptr<logger> frame_times_logger = nullptr;
@@ -645,8 +757,12 @@ int main(int argc, char **argv) {
 				v3d pix_dir_xy = v3d::rotate(pix_dir_x, angle, new_right);
 				// TODO: use pythagoras to do both rotations in 1
 
+				//v3d dir2 = camera_transform * vector(pixel_dirs[x][y]);
+				v3d dir2 = pixel_dirs[x*fb->vinfo.xres+y];
+
 				unsigned int idx = 0;
-				HIT::type hit = ray_cast(start, pix_dir_xy, nullptr, &idx);
+				//HIT::type hit = ray_cast(start, pix_dir_xy, nullptr, &idx);
+				HIT::type hit = ray_cast(start, dir2, nullptr, &idx);
 				if(hit) {
 					if(idx == 0) {
 						pix.colour.r = 0;
