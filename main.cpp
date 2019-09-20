@@ -383,17 +383,17 @@ void* mouse(void *evt_name) {
 
 template<typename T>
 struct array_2d {
-	const size_t N;
+	const size_t M;
 	public:
 		std::unique_ptr<T[]> arr;
 
 		constexpr array_2d(size_t n, size_t m):
-			N(n),
+			M(m),
 			arr(std::make_unique<T[]>(n * m)) {};
 
 		// allow arr operator for first idx
 		T* operator[](size_t i) {
-			return arr.get() + i*N;
+			return arr.get() + i*M;
 		}
 
 		// have the interface of a unique_ptr
@@ -403,7 +403,8 @@ struct array_2d {
 };
 
 
-#if 0
+#define USE_ARR_2D 1
+#if USE_ARR_2D
 /** makes a pixel array for a rectillinear projection
  *
  * creates an array of vectors of unit length, each correspoinding to
@@ -448,7 +449,7 @@ array_2d<v3d> make_pixel_arr(size_t x, size_t y, double hfov) {
 
 	return out;
 }
-#endif
+#else
 
 // temp version just using malloc for simplicity
 v3d* make_pixel_arr(size_t x, size_t y, double hfov) {
@@ -475,13 +476,14 @@ v3d* make_pixel_arr(size_t x, size_t y, double hfov) {
 
 	for(size_t i = 0; i < x; i++)
 		for(size_t j = 0; j < y; j++) {
-			out[i*x+j] = v3d::normalise(v3d(1,
-						start_y + 2*start_y*j,
-						start_x + 2*start_x*i));
+			out[i+x*j] = v3d::normalise(v3d(1,
+						start_y + (2*start_y*j)/y,
+						start_x + (2*start_x*i)/x));
 		}
 
 	return out;
 }
+#endif
 
 
 int main(int argc, char **argv) {
@@ -606,13 +608,13 @@ int main(int argc, char **argv) {
 
 
 	// set up array of different directions for each pixel
-	/*
+#if USE_ARR_2D
 	array_2d<v3d>
 		pixel_dirs = make_pixel_arr(
 				fb->vinfo.xres, fb->vinfo.yres, 90);
-				*/
-
+#else
 	v3d *pixel_dirs = make_pixel_arr(fb->vinfo.xres, fb->vinfo.yres, 90);
+#endif
 
 
 	// log file for the frame times
@@ -757,8 +759,11 @@ int main(int argc, char **argv) {
 				v3d pix_dir_xy = v3d::rotate(pix_dir_x, angle, new_right);
 				// TODO: use pythagoras to do both rotations in 1
 
-				//v3d dir2 = camera_transform * vector(pixel_dirs[x][y]);
-				v3d dir2 = pixel_dirs[x*fb->vinfo.xres+y];
+#if USE_ARR_2D
+				v3d dir2 = pixel_dirs[x][y];
+#else
+				v3d dir2 = pixel_dirs[x+fb->vinfo.xres*y];
+#endif
 
 				unsigned int idx = 0;
 				//HIT::type hit = ray_cast(start, pix_dir_xy, nullptr, &idx);

@@ -1,4 +1,5 @@
 #pragma once
+#include <csignal>
 
 #include "libdraw.hpp"
 #include "lib/write_screen/drawlib.h"

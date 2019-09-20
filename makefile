@@ -7,8 +7,8 @@ DFILERULES=-MMD -MP
 #CFLAGS= -O0 -std=c++2a -Wall $(DFILERULES)
 #CFLAGS= -O1 -std=c++2a -Wall $(DFILERULES)
 #CFLAGS= -O2 -std=c++2a -Wall $(DFILERULES)
-CFLAGS= -O3 -std=c++2a -Wall $(DFILERULES)
-#CFLAGS= -g -std=c++2a -Wall $(DFILERULES)
+#CFLAGS= -O3 -std=c++2a -Wall $(DFILERULES)
+CFLAGS= -g -std=c++2a -Wall $(DFILERULES)
 LDFLAGS=$(CFLAGS) -lncurses -lm -pthread
 CC=g++
 DOT_A_FILES= lib/vector/libvector.a lib/write_screen/libdraw.a
