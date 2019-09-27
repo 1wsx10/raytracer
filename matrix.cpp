@@ -356,24 +356,24 @@ double m44d::det() const {
 	//TODO better determinant, LU algorithm
 	double det = 0;
 	det += n[0][0] * det3(
-			n[1][1],n[1][2],n[1][3],
-			n[2][1],n[2][2],n[2][3],
-			n[3][1],n[3][2],n[3][3]);
+			n[1][1],n[2][1],n[3][1],
+			n[1][2],n[2][2],n[3][2],
+			n[1][3],n[2][3],n[3][3]);
 
-	det -= n[0][1] * det3(
-			n[1][0],n[1][2],n[1][3],
-			n[2][0],n[2][2],n[2][3],
-			n[3][0],n[3][2],n[3][3]);
+	det -= n[1][0] * det3(
+			n[0][1],n[2][1],n[3][1],
+			n[0][2],n[2][2],n[3][2],
+			n[0][3],n[2][3],n[3][3]);
 
-	det += n[0][2] * det3(
-			n[1][0],n[1][1],n[1][3],
-			n[2][0],n[2][1],n[2][3],
-			n[3][0],n[3][1],n[3][3]);
+	det += n[2][0] * det3(
+			n[0][1],n[1][1],n[3][1],
+			n[0][2],n[1][2],n[3][2],
+			n[0][3],n[1][3],n[3][3]);
 
-	det -= n[0][3] * det3(
-			n[1][0],n[1][1],n[1][2],
-			n[2][0],n[2][1],n[2][2],
-			n[3][0],n[3][1],n[3][2]);
+	det -= n[3][0] * det3(
+			n[0][1],n[1][1],n[2][1],
+			n[0][2],n[1][2],n[2][2],
+			n[0][3],n[1][3],n[2][3]);
 
 	return det;
 }
@@ -476,19 +476,19 @@ m44d m44d::operator-(const m44d &other) const {
 
 // multiplication
 
-#include <cstring>
 m44d m44d::operator*(const m44d &rhs) const {
 	m44d ret = m44d::zero;
 
-	/*  [xxx] = [xxx] * [xxx]
-	 *  [xxx]   [xxx]   [xxx]
-	 *  [xxx]   [xxx]   [xxx]
+	/*  [xxxx] = [xxxx] * [xxxx]
+	 *  [xxxx]   [xxxx]   [xxxx]
+	 *  [xxxx]   [xxxx]   [xxxx]
+	 *  [xxxx]   [xxxx]   [xxxx]
 	 */
 
 	for(int i = 0; i < 4; i++)     //row in dest
 		for(int j = 0; j < 4; j++)   //col in dest
 			for(int k = 0; k < 4; k++) //idx of val in current row/col
-				ret.n[i][j] += n[i][k] * rhs.n[k][j];
+				ret.n[j][i] += n[k][i] * rhs.n[j][k];
 
 	return ret;
 }
