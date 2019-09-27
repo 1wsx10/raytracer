@@ -489,6 +489,13 @@ v3d* make_pixel_arr(size_t x, size_t y, double hfov) {
 int main(int argc, char **argv) {
 	timer main_timer("main timer");
 
+	m44d asdf = {{{0,0,0,0},
+		{0,0,0,0},
+		{0,0,0,0},
+		{0,0,0,0}}};
+	std::cout << asdf << std::endl;
+	exit(1);
+
 	bool one_render = false;
 	bool scripted_movement = false;
 

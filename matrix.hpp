@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include "lib/vector/vector.h"
 
 class m41d;
@@ -42,6 +44,7 @@ class m44d {
 		static m44d transposition(const m44d&);
 
 		bool operator==(const m44d&) const;
+		bool operator!=(const m44d&) const;
 
 		m44d operator+(const m44d&) const;
 		m44d& operator+=(const m44d&);
@@ -57,10 +60,13 @@ class m44d {
 		m44d operator*(double) const;
 		m44d operator/(double) const;
 		friend m44d operator*(double, const m44d&);
-		friend m44d operator/(double, const m44d&);
+		//friend m44d operator/(double, const m44d&); doesn't exist
 
 		m44d& operator*=(double);
 		m44d& operator/=(double);
+
+		// display
+		friend std::ostream& operator<<(std::ostream&, const m44d&);
 
 		// implicit double[][] conversion
 		using double_arr = double[4];

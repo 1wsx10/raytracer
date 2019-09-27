@@ -1,6 +1,7 @@
 #include "matrix.hpp"
 #include <utility>
 #include <cstring>
+#include <cassert>
 
 
 /** m1d class
@@ -384,7 +385,7 @@ bool m44d::invert() {
 		return false;
 	}
 
-	*this *= 1/determinant;
+	assert(false);//TODO
 	return true;
 }
 
@@ -393,7 +394,8 @@ bool m44d::inverse(m44d &out) {
 	if(determinant == 0) {
 		return false;
 	}
-	out = 1/determinant * out;
+
+	assert(false);//TODO
 	return true;
 }
 
@@ -438,6 +440,11 @@ bool m44d::operator==(const m44d &other) const {
 				return false;
 	return true;
 }
+
+bool m44d::operator!=(const m44d &other) const {
+	return !(*this == other);
+}
+
 
 // addition
 m44d& m44d::operator+=(const m44d &other) {
@@ -515,9 +522,6 @@ m44d m44d::operator/(double val) const {
 m44d operator*(double val, const m44d &matrix) {
 	return matrix * val;
 }
-m44d operator/(double val, const m44d &matrix) {
-	return matrix * val;
-}
 
 m44d& m44d::operator*=(double val) {
 	for(int i = 0; i < 4*4; i++)
@@ -529,4 +533,14 @@ m44d& m44d::operator/=(double val) {
 	for(int i = 0; i < 4*4; i++)
 		((double*)n)[i] /= val;
 	return *this;
+}
+
+
+std::ostream& operator<<(std::ostream &os, const m44d &mat) {
+	os << '\n';
+
+	for(int i = 0; i < 4; i++)
+		os << "["<<mat[i][0]<<","<<mat[i][1]<<","<<mat[i][2]<<","<<mat[i][3]<<"]"<< std::endl;
+
+	return os;
 }

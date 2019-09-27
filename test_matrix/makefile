@@ -9,7 +9,7 @@ DFILERULES=-MMD -MP
 #CFLAGS= -O2 -std=c++2a -Wall $(DFILERULES)
 #CFLAGS= -O3 -std=c++2a -Wall $(DFILERULES)
 CFLAGS= -g -std=c++2a -Wall $(DFILERULES)
-LDFLAGS=$(CFLAGS) -lncurses -lm -pthread
+LDFLAGS=$(CFLAGS)
 CC=g++
 DOT_A_FILES= ../lib/vector/libvector.a /lib/libboost_test_exec_monitor.a
 INC= ../lib/
@@ -19,7 +19,7 @@ L=$(addprefix -L,$(dir $(DOT_A_FILES)))
 # "lib/vector/libvector.a" becomes "-lvector"
 l=$(addprefix -l,$(notdir $(basename $(subst /lib,/,$(DOT_A_FILES)))))
 
-.PHONY: all clean locate_headers print-% SAY_COMPILING SAY_LINKING
+.PHONY: all test clean locate_headers print-% SAY_COMPILING SAY_LINKING
 .SUFFIXES:#remove all suffixes
 .SUFFIXES: .cpp .h .o .a #define our own
 
@@ -51,6 +51,9 @@ $(DOT_A_FILES):
 	@echo
 	@echo '===================='
 	make $(notdir $@) -C $(dir $@)
+
+test: $(PROGRAM)
+	./test_matrix
 
 -include $(DFILES)
 
