@@ -58,10 +58,16 @@ BOOST_AUTO_TEST_CASE(test_44_make_tx)
 			);
 
 	m44d translate_3_x_precalc =
-	{{{1,0,0,3},
+	{{
+		 {1,0,0,3},
 		 {0,1,0,0},
 		 {0,0,1,0},
 		 {0,0,0,1}}};
+	point asdf = v3d(1,22,3);
+	v3d& asdf_v = asdf;
+
+	asdf = translate_3_x * asdf;
+	std::cout << "asdf: "<<asdf_v<<std::endl;
 
 	BOOST_TEST(translate_3_x == translate_3_x_precalc,
 			"translate_3_x = "<< translate_3_x << "\n" <<

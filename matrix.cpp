@@ -137,20 +137,6 @@ m41d& m41d::operator-=(const m41d &other) {
 	return *this;
 }
 
-m41d operator*(const m44d& lhs, const m41d& rhs) {
-	m41d out(m1d::zero);
-	/*  [xxxx] * [x] = [x]
-	 *  [xxxx]   [x]   [x]
-	 *  [xxxx]   [x]   [x]
-	 *  [xxxx]   [x]   [x]
-	 */
-	for(size_t i = 0; i < 4; i++)
-		for(size_t k = 0; k < 4; k++)
-			out[i] += lhs[i][k] * rhs[k];
-
-	return out;
-}
-
 m44d m41d::operator*(const m14d& rhs) {
 	m44d out;
 	/*  [x] * [xxxx] = [xxxx]
@@ -167,6 +153,17 @@ m44d m41d::operator*(const m14d& rhs) {
 
 	return out;
 }
+
+
+/** vector class
+ *
+ */
+
+
+/** point class
+ *
+ */
+
 
 /** m14d class
  *
@@ -497,6 +494,29 @@ m44d& m44d::operator*=(const m44d &other) {
 	*this = *this * other;
 	return *this;
 }
+
+// m44d * m41d
+m41d m44d::operator*(const m41d& rhs) const {
+	m41d out(m1d::zero);
+	/*  [xxxx] * [x] = [x]
+	 *  [xxxx]   [x]   [x]
+	 *  [xxxx]   [x]   [x]
+	 *  [xxxx]   [x]   [x]
+	 */
+	for(size_t i = 0; i < 4; i++)
+		for(size_t k = 0; k < 4; k++)
+			out[i] += n[i][k] * rhs[k];
+
+	return out;
+}
+
+vector m44d::operator*(const vector& other) const {
+	return static_cast<vector>(*this * static_cast<m41d>(other));
+}
+point m44d::operator*(const point& other) const {
+	return static_cast<point>(*this * static_cast<m41d>(other));
+}
+
 
 // negation
 m44d m44d::operator-() const {

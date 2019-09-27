@@ -6,6 +6,9 @@
 
 class m41d;
 class m14d;
+class vector;
+class point;
+
 
 class m44d {
 	public:
@@ -54,6 +57,12 @@ class m44d {
 
 		m44d operator*(const m44d&) const;
 		m44d& operator*=(const m44d&);
+
+		// m44d * m41d
+		// the m14d version is in the m14d class
+		m41d operator*(const m41d&) const;
+		vector operator*(const vector&) const;
+		point operator*(const point&) const;
 
 		m44d operator-() const;// a = -my_m44d;
 
@@ -133,9 +142,6 @@ class m1d {
 };
 
 
-class vector;
-class point;
-
 class m41d : public m1d {
 	public:
 
@@ -157,8 +163,6 @@ class m41d : public m1d {
 		m41d& operator+=(const m41d&);
 		m41d& operator-=(const m41d&);
 
-		// m44d * m41d
-		friend m41d operator*(const m44d&, const m41d&);
 		// m41d * m14d
 		m44d operator*(const m14d&);
 };
