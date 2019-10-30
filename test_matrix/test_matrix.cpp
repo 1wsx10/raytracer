@@ -13,66 +13,130 @@
 
 BOOST_AUTO_TEST_CASE(test_44_make_tx)
 {
-	m44d rotate_90_around_x = m44d::make_transformation(
-			v3d::rotate(v3d::X, 90, v3d::X),
-			v3d::rotate(v3d::Y, 90, v3d::X),
-			v3d::rotate(v3d::Z, 90, v3d::X)
-			);
-	m44d rotate_90_around_x_precalc =
-	{{{1,0,0,0},
-		 {0,cos(90*PI/180),-sin(90*PI/180),0},
-		 {0,sin(90*PI/180),cos(90*PI/180),0},
-		 {0,0,0,1}}};
+	{// rotate 90 around x
+		m44d rotate_90_around_x = m44d::make_transformation(
+				v3d::rotate(v3d::X, 90, v3d::X),
+				v3d::rotate(v3d::Y, 90, v3d::X),
+				v3d::rotate(v3d::Z, 90, v3d::X)
+				);
+		m44d rotate_90_around_x_precalc =
+		{{{1,0,0,0},
+			{0,cos(90*PI/180),-sin(90*PI/180),0},
+			{0,sin(90*PI/180),cos(90*PI/180),0},
+			{0,0,0,1}}};
 
-	BOOST_TEST(rotate_90_around_x == rotate_90_around_x_precalc);
+		BOOST_TEST(rotate_90_around_x == rotate_90_around_x_precalc);
 
-	{
-		v3d x = v3d::X;
-		m41d xm(x, 1);
-		xm = rotate_90_around_x * xm;
-		v3d &xv = xm;
+		{
+			v3d x = v3d::X;
+			m41d xm(x, 1);
+			xm = rotate_90_around_x * xm;
+			v3d &xv = xm;
 
-		BOOST_TEST(xv.equals(v3d::X, 1e-5), ""<<xv<<".equals("<<v3d::X<<")");
+			BOOST_TEST(xv.equals(v3d::X, 1e-5), ""<<xv<<".equals("<<v3d::X<<")");
+		}
+		{
+			v3d y = v3d::Y;
+			m41d ym(y, 1);
+			ym = rotate_90_around_x * ym;
+			v3d &zv = ym;
+
+			BOOST_TEST(zv.equals(v3d::Z, 1e-5), ""<<zv<<".equals("<<v3d::Z<<")");
+		}
+		{
+			v3d z = v3d::Z;
+			m41d zm(z, 1);
+			zm = rotate_90_around_x * zm;
+			v3d &yv = zm;
+
+			BOOST_TEST(yv.equals(-v3d::Y, 1e-5), ""<<yv<<".equals("<<-v3d::Y<<")");
+		}
 	}
-	{
-		v3d y = v3d::Y;
-		m41d ym(y, 1);
-		ym = rotate_90_around_x * ym;
-		v3d &zv = ym;
 
-		BOOST_TEST(zv.equals(v3d::Z, 1e-5), ""<<zv<<".equals("<<v3d::Z<<")");
+	{// scale 3 in x direction
+		m44d scale_3_x = m44d::make_transformation(
+				v3d::X * 3,
+				v3d::Y,
+				v3d::Z
+				);
+		m44d scale_3_x_precalc =
+		{{{3,0,0,0},
+			{0,1,0,0},
+			{0,0,1,0},
+			{0,0,0,1}}};
+
+		BOOST_TEST(scale_3_x == scale_3_x_precalc);
+
+		{
+			v3d x = v3d::X;
+			m41d xm(x, 1);
+			xm = scale_3_x * xm;
+			v3d &xv = xm;
+
+			BOOST_TEST(xv.equals(v3d::X * 3, 1e-5), ""<<xv<<".equals("<<v3d::X*3<<")");
+		}
+		{
+			v3d y = v3d::Y;
+			m41d ym(y, 1);
+			ym = scale_3_x * ym;
+			v3d &yv = ym;
+
+			BOOST_TEST(yv.equals(v3d::Y, 1e-5), ""<<yv<<".equals("<<v3d::Y<<")");
+		}
+		{
+			v3d z = v3d::Z;
+			m41d zm(z, 1);
+			zm = scale_3_x * zm;
+			v3d &zv = zm;
+
+			BOOST_TEST(zv.equals(v3d::Z, 1e-5), ""<<zv<<".equals("<<v3d::Z<<")");
+		}
 	}
-	{
-		v3d z = v3d::Z;
-		m41d zm(z, 1);
-		zm = rotate_90_around_x * zm;
-		v3d &yv = zm;
 
-		BOOST_TEST(yv.equals(-v3d::Y, 1e-5), ""<<yv<<".equals("<<-v3d::Y<<")");
+	{// translate 3 in x direction
+		m44d translate_3_x = m44d::make_translation(3 * v3d::X);
+		m44d translate_3_x_precalc =
+		{{
+			{1,0,0,3},
+			{0,1,0,0},
+			{0,0,1,0},
+			{0,0,0,1}}};
+		point asdf = v3d(1,22,3);
+		v3d& asdf_v = asdf;
+
+		asdf = translate_3_x * asdf;
+		std::cout << "asdf: "<<asdf_v<<std::endl;
+
+		BOOST_TEST(translate_3_x == translate_3_x_precalc,
+				"translate_3_x = "<< translate_3_x << "\n" <<
+				"translate_3_x_precalc = " << translate_3_x_precalc << "\n"
+				);
+
+		{
+			v3d x = v3d::X;
+			m41d xm(x, 1);
+			xm = translate_3_x * xm;
+			v3d &xv = xm;
+
+			BOOST_TEST(xv.equals(v3d::X * 4, 1e-5), ""<<xv<<".equals("<<v3d::X*4<<")");
+		}
+		{
+			v3d y = v3d::Y;
+			m41d ym(y, 1);
+			ym = translate_3_x * ym;
+			v3d &yv = ym;
+
+			BOOST_TEST(yv.equals(v3d::Y + v3d::X*3, 1e-5), ""<<yv<<".equals("<<v3d::Y + v3d::X * 3<<")");
+		}
+		{
+			v3d z = v3d::Z;
+			m41d zm(z, 1);
+			zm = translate_3_x * zm;
+			v3d &zv = zm;
+
+			BOOST_TEST(zv.equals(v3d::Z + v3d::X*3, 1e-5), ""<<zv<<".equals("<<v3d::Z + v3d::X * 3<<")");
+		}
 	}
-
-	m44d translate_3_x = m44d::make_transformation(
-			v3d::X + 3*v3d::X,
-			v3d::Y + 3*v3d::X,
-			v3d::Z + 3*v3d::X
-			);
-
-	m44d translate_3_x_precalc =
-	{{
-		 {1,0,0,3},
-		 {0,1,0,0},
-		 {0,0,1,0},
-		 {0,0,0,1}}};
-	point asdf = v3d(1,22,3);
-	v3d& asdf_v = asdf;
-
-	asdf = translate_3_x * asdf;
-	std::cout << "asdf: "<<asdf_v<<std::endl;
-
-	BOOST_TEST(translate_3_x == translate_3_x_precalc,
-			"translate_3_x = "<< translate_3_x << "\n" <<
-			"translate_3_x_precalc = " << translate_3_x_precalc << "\n"
-			);
 
 
 

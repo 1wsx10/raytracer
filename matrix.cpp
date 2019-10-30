@@ -32,6 +32,7 @@ m1d m1d::corrected() const {
 	return *this / n[3];
 }
 
+#if 0
 void declare_types() {
 	m1d asdf(5,3,2,1);
 	asdf.correct<true>();
@@ -39,6 +40,7 @@ void declare_types() {
 	asdf.corrected<true>();
 	asdf.corrected<false>();
 }
+#endif
 
 // maths with scalars
 m1d m1d::operator*(const double &rhs) const {
@@ -325,6 +327,17 @@ m44d m44d::make_transformation(
 		out.n[0][idx] = i[idx];
 		out.n[1][idx] = j[idx];
 		out.n[2][idx] = k[idx];
+	}
+
+	return out;
+}
+
+
+m44d m44d::make_translation(const v3d& tx) {
+	m44d out = m44d::unit;
+
+	for(int i = 0; i < 3; i++) {
+		out[i][3] = tx[i];
 	}
 
 	return out;

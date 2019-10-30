@@ -39,6 +39,15 @@ class m44d {
 		template<typename Func>
 		static m44d make_transformation(Func t);
 
+		/** create a transformation matrix for translation
+		 * where tx is the translation you want to encode
+		 *
+		 * @param tx translation represented as a vector
+		 *
+		 * @return the transformation matrix for tx
+		 */
+		static m44d make_translation(const v3d& tx);
+
 		double det() const;
 		bool invert();
 		static bool inverse(m44d &out);
@@ -82,6 +91,15 @@ class m44d {
 		constexpr operator double_arr*() { return n; };
 		constexpr operator const double_arr*() const { return n; };
 };
+// copy assignment
+static_assert(std::is_trivially_assignable<m44d, const m44d&>::value, "");
+// copy ctor
+static_assert(std::is_trivially_copy_constructible<m44d>::value, "");
+// normal ctor
+static_assert(std::is_trivially_copyable<m44d>::value, "");
+// dtor
+static_assert(std::is_trivially_destructible<m44d>::value, "");
+
 
 // lambda function support for make_tx
 template<typename Func>
