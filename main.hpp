@@ -37,6 +37,9 @@ m44d rotate_tx;
 mutex translation_mutex("translation_mutex");
 v3d translation(-13, 2, -3);
 
+pthread_cond_t main_start = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t main_start_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 mutex fov_mutex("fov_mutex");
 double fov = 90;

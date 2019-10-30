@@ -368,10 +368,26 @@ void* mouse(void *evt_name) {
 
 		// create a transformation matrix that will rotate any vector
 		// the same way as rotating the above vector
+#if 1
 		rotate_tx = m44d::make_transformation([=](const v3d& to_rotate) {
-				return vector(v3d::rotate(to_rotate, y_deg, -v3d::Z)
-				.rotate(x_deg, -v3d::Y));
+				return v3d::rotate(to_rotate, y_deg, -v3d::Z)
+				.rotate(x_deg, -v3d::Y);
 				});
+#else
+
+		rotate_tx = m44d::make_transformation(
+				v3d::rotate(v3d::X, y_deg, -v3d::Z).rotate(x_deg, -v3d::Y),
+				v3d::rotate(v3d::Y, y_deg, -v3d::Z).rotate(x_deg, -v3d::Y),
+				v3d::rotate(v3d::Z, y_deg, -v3d::Z).rotate(x_deg, -v3d::Y)
+				);
+
+#endif
+#if 0
+		std::ofstream rot_tx_file("rot_tx.csv", std::ios::out);
+		rot_tx_file << std::endl << "rot_tx: " << rotate_tx << std::endl << std::endl;
+#endif
+
+		assert(!pthread_cond_signal(&main_start));
 
 		direction_mutex.unlock();
 	}
@@ -418,6 +434,7 @@ struct array_2d {
  * @returns   a struct containing a unique_ptr,
  *            but can be indexed up to x and y to retrieve a pixel
  */
+#if 0
 array_2d<v3d> make_pixel_arr(size_t x, size_t y, double hfov) {
 	assert(fov < 180);
 	array_2d<v3d> out(x, y);
@@ -443,10 +460,41 @@ array_2d<v3d> make_pixel_arr(size_t x, size_t y, double hfov) {
 	for(size_t i = 0; i < x; i++)
 		for(size_t j = 0; j < y; j++) {
 			out[i][j] = v3d::normalise(v3d(1,
-						start_y + 2*start_y*j,
-						start_x + 2*start_x*i));
+						-start_y + 2*start_y*j,
+						-start_x + 2*start_x*i));
 		}
 
+	return out;
+}
+#endif
+
+array_2d<v3d> make_pixel_arr(size_t x, size_t y, double hfov) {
+	const double vfov = hfov * y / x;
+	array_2d<v3d> out(x, y);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-compare"
+	// x gets converted to unsigned int, but all 
+	for(size_t i = 0; i < x && i < INT_MAX; i++) {
+#pragma GCC diagnostic pop
+
+		// account for difference in angle of different pixels
+		double xr_on_2 = x/2.0;
+		double angle = hfov * (i - xr_on_2) / (double)xr_on_2;
+		v3d pix_dir_x = v3d::rotate(v3d::X, angle, v3d::Y);
+		v3d new_right = v3d::rotate(v3d::Z, angle, v3d::Y);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-compare"
+		for(size_t j = 0; j < y && j < INT_MAX; j++) {
+#pragma GCC diagnostic pop
+
+			// angle of pixels, but for i axis
+			double yr_on_2 = y/2.0;
+			double angle = vfov * (j - yr_on_2) / (double)yr_on_2;
+			out[i][j] = v3d::rotate(pix_dir_x, angle, new_right);
+		}
+	}
 	return out;
 }
 #else
@@ -489,12 +537,6 @@ v3d* make_pixel_arr(size_t x, size_t y, double hfov) {
 int main(int argc, char **argv) {
 	timer main_timer("main timer");
 
-	m44d asdf = {{{0,0,0,0},
-		{0,0,0,0},
-		{0,0,0,0},
-		{0,0,0,0}}};
-	std::cout << asdf << std::endl;
-	exit(1);
 
 	bool one_render = false;
 	bool scripted_movement = false;
@@ -562,6 +604,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	assert(!pthread_cond_wait(&main_start, &main_start_mutex));
 
 
 #if 0// ncurses mouse test
@@ -619,8 +662,26 @@ int main(int argc, char **argv) {
 	array_2d<v3d>
 		pixel_dirs = make_pixel_arr(
 				fb->vinfo.xres, fb->vinfo.yres, 90);
+
+	{
+		std::ofstream pixel_array_file("pixel_array.csv", std::ios::out);
+		pixel_array_file << "x, y, radians" << std::endl;// title
+		for(unsigned int x = 0; x < fb->vinfo.xres; x++)
+			for(unsigned int y = 0; y < fb->vinfo.yres; y++) {
+				pixel_array_file << x << ", " << y << ", " << pixel_dirs[x][y] << std::endl;
+			}
+	}
 #else
 	v3d *pixel_dirs = make_pixel_arr(fb->vinfo.xres, fb->vinfo.yres, 90);
+
+	{
+		std::ofstream pixel_array_file("pixel_array.csv", std::ios::out);
+		pixel_array_file << "x, y, radians" << std::endl;// title
+		for(unsigned int x = 0; x < fb->vinfo.xres; x++)
+			for(unsigned int y = 0; y < fb->vinfo.yres; y++) {
+				pixel_array_file << x << ", " << y << ", " << pixel_dirs[x + y*fb->vinfo.xres] << std::endl;
+			}
+	}
 #endif
 
 
@@ -710,11 +771,9 @@ int main(int argc, char **argv) {
 			camera_transform = rotate_tx;
 			direction_mutex.unlock();
 
-			m44d translation = m44d::unit;
-			for(int i = 0; i < 3; i++)
-				translation[i][3] += start[i];
-
-			camera_transform *= translation;
+			translation_mutex.lock("setup camera transform");
+			camera_transform *= m44d::make_translation(translation);
+			translation_mutex.unlock();
 		}
 
 
@@ -745,11 +804,13 @@ int main(int argc, char **argv) {
 #pragma GCC diagnostic pop
 			static_cast<PIXEL*>(&pix)->x = &x;
 
+#if 0
 			// account for difference in angle of different pixels
 			double xr_on_2 = fb->vinfo.xres/2.0;
 			double angle = hfov * (x - xr_on_2) / (double)xr_on_2;
 			v3d pix_dir_x = v3d::rotate(dir, angle, up);
 			v3d new_right = v3d::rotate(right, angle, up);
+#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"
@@ -759,22 +820,33 @@ int main(int argc, char **argv) {
 
 				if(curses_enabled && x <= 200 && y <= 32)
 					continue;
-
+#if 0
 				// angle of pixels, but for Y axis
 				double yr_on_2 = fb->vinfo.yres/2.0;
 				double angle = vfov * (y - yr_on_2) / (double)yr_on_2;
 				v3d pix_dir_xy = v3d::rotate(pix_dir_x, angle, new_right);
 				// TODO: use pythagoras to do both rotations in 1
+#endif
 
 #if USE_ARR_2D
 				v3d dir2 = pixel_dirs[x][y];
 #else
 				v3d dir2 = pixel_dirs[x+fb->vinfo.xres*y];
 #endif
+				m41d dm(dir2, 0);
+				v3d dir3 = camera_transform * dm;
+
+				/*
+				std::cout << std::endl << "dir: " << dir3 << std::endl;
+				std::cout << std::endl << "dir: " << camera_transform << std::endl;
+				direction_mutex.lock("read rotate tx");
+				std::cout << std::endl << "dir: " << rotate_tx << std::endl;
+				direction_mutex.unlock();
+				*/
 
 				unsigned int idx = 0;
 				//HIT::type hit = ray_cast(start, pix_dir_xy, nullptr, &idx);
-				HIT::type hit = ray_cast(start, dir2, nullptr, &idx);
+				HIT::type hit = ray_cast(start, dir3, nullptr, &idx);
 				if(hit) {
 					if(idx == 0) {
 						pix.colour.r = 0;
