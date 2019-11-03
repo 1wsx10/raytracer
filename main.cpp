@@ -168,7 +168,8 @@ void* keys_timed(void *curse_shared_ptr) {
 	do {
 		quit_mutex.unlock();
 
-		getch();
+		int key = getch();
+		ungetch(key);
 
 		std::chrono::time_point<std::chrono::steady_clock> current_time =
 			std::chrono::steady_clock::now();
@@ -178,7 +179,6 @@ void* keys_timed(void *curse_shared_ptr) {
 
 		bool key_pressed;
 		do {// inner loop
-			current_time = std::chrono::steady_clock::now();
 			key_pressed = false;
 
 			// get the 3 unit vectors relative to direction
@@ -190,6 +190,7 @@ void* keys_timed(void *curse_shared_ptr) {
 			v3d up = v3d::Y;
 			v3d right = v3d::cross(forward, up);
 
+			current_time = std::chrono::steady_clock::now();
 			if(has_key((int)'w') || has_key(KEY_UP)) {
 				key_pressed = true;
 				delta = current_time - last_time;
