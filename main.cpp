@@ -16,10 +16,10 @@ HIT::type ray_cast(const v3d& start, const v3d& dir,
 #if DEBUG
 	assert(IS_APPROX_0(dir.length() - 1, 1e-6));
 #endif
-	
+
 	HIT::type hit = HIT::undef;
 
-	
+
 	{// spheres
 		//timer time_spheres("ray spheres");
 
@@ -724,6 +724,7 @@ int main(int argc, char **argv) {
 
 	// start the loop
 	scripted_movement_controller scripter;
+	int &frame_num = scripter.frame_num;
 	quit_mutex.lock("main enter loop");
 	while(!quit) {
 		quit_mutex.unlock();
@@ -824,10 +825,16 @@ int main(int argc, char **argv) {
 					}
 					draw(fb.get(), &pix);
 				} else {
+					pix.colour.r = (int)abs(255*pixel_direction_rotated.x);
+					pix.colour.g = (int)abs(255*pixel_direction_rotated.y);
+					pix.colour.b = (int)abs(255*pixel_direction_rotated.z);
+					pix.colour.t = 0;
+#if 0
 					pix.colour.r = (int)(255 * x) / fb->vinfo.xres;
 					pix.colour.g = (int)(255 * y) / fb->vinfo.yres;
 					pix.colour.b = 0;
 					pix.colour.t = 0;
+#endif
 					draw(fb.get(), &pix);
 				}
 			}
