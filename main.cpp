@@ -519,6 +519,66 @@ v3d* make_pixel_arr(size_t x, size_t y, double hfov) {
 }
 #endif
 
+class scripted_movement_controller {
+	public:
+		int frame_num = 0;
+		size_t key = 0;
+		script_keyframe before, after;
+
+		bool next_frame(v3d&, v3d&, double&);
+};
+
+/* linear interp the keyframes so we get the info for this frame
+ * set dir, start, hfov from scripted movement
+ *
+ * @param dir    var to be set from script
+ * @param start  var to be set from script
+ * @param hfov   var to be set from script
+ *
+ * @returns finished status
+ */
+bool scripted_movement_controller::next_frame(v3d &dir, v3d &start, double &hfov) {
+
+	// figure out which keyframes we are in
+	if(key+2 == script_len && script[key+1].frame_num == frame_num+1)
+		return true;
+
+	assert(script[key].frame_num < script[key+1].frame_num);
+	if(script[key+1].frame_num == frame_num) {
+		key++;
+		before = script[key];
+		after = script[key+1];
+	}
+
+	// figure out the lerp
+	double after_proportion =
+		(double)(frame_num - script[key].frame_num) /
+		(script[key+1].frame_num - script[key].frame_num);
+	double before_proportion = 1 - after_proportion;
+
+	if(!(before_proportion <= 1 && after_proportion <= 1)) {
+		printf("\n===ERROR===\n");
+		printf("proportions b:%1.2f a:%1.2f\n",
+				before_proportion, after_proportion);
+		printf("key: %lu\n", key);
+		printf("frame_num: %d\n", frame_num);
+		printf("keyframe frame_num curr:%d next:%d\n",
+				script[key].frame_num, script[key+1].frame_num);
+		assert(false);
+	}
+
+	// actually set the vars
+	dir = script[key].dir * before_proportion +
+		script[key+1].dir * after_proportion;
+	dir.normalise();
+	start = script[key].trans * before_proportion +
+		script[key+1].trans * after_proportion;
+	hfov = script[key].fov * before_proportion +
+		script[key+1].fov * after_proportion;
+
+	return false;
+}
+
 
 int main(int argc, char **argv) {
 	timer main_timer("main timer");
@@ -663,9 +723,7 @@ int main(int argc, char **argv) {
 
 
 	// start the loop
-	int frame_num = 0;
-	size_t key = 0;
-	script_keyframe before, after;
+	scripted_movement_controller scripter;
 	quit_mutex.lock("main enter loop");
 	while(!quit) {
 		quit_mutex.unlock();
@@ -676,48 +734,7 @@ int main(int argc, char **argv) {
 		v3d dir, start;
 		double hfov=0;
 		if(scripted_movement) {
-			/* linear interp the keyframes so we get the info for this frame
-			 * set dir, start, hfov from scripted movement
-			 */
-
-
-			// figure out which keyframes we are in
-			if(key+2 == script_len && script[key+1].frame_num == frame_num+1)
-				break;
-
-			assert(script[key].frame_num < script[key+1].frame_num);
-			if(script[key+1].frame_num == frame_num) {
-				key++;
-				before = script[key];
-				after = script[key+1];
-			}
-
-			// figure out the lerp
-			double after_proportion =
-				(double)(frame_num - script[key].frame_num) /
-				(script[key+1].frame_num - script[key].frame_num);
-			double before_proportion = 1 - after_proportion;
-
-			if(!(before_proportion <= 1 && after_proportion <= 1)) {
-				printf("\n===ERROR===\n");
-				printf("proportions b:%1.2f a:%1.2f\n",
-						before_proportion, after_proportion);
-				printf("key: %lu\n", key);
-				printf("frame_num: %d\n", frame_num);
-				printf("keyframe frame_num curr:%d next:%d\n",
-						script[key].frame_num, script[key+1].frame_num);
-				assert(false);
-			}
-
-			// actually set the vars
-			dir = script[key].dir * before_proportion +
-				script[key+1].dir * after_proportion;
-			dir.normalise();
-			start = script[key].trans * before_proportion +
-				script[key+1].trans * after_proportion;
-			hfov = script[key].fov * before_proportion +
-				script[key+1].fov * after_proportion;
-
+			scripter.next_frame(dir, start, hfov);
 		} else {// use vars from input
 			direction_mutex.lock("main copy dir");
 			dir = direction;
