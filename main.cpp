@@ -158,37 +158,122 @@ std::string get_mouse_name(char *devices_list) {
 
 
 
-void* keys(void *curse_shared_ptr) {
+void* keys_timed(void *curse_shared_ptr) {
+	std::shared_ptr<curse> curses_ptr = *(std::shared_ptr<curse>*)(curse_shared_ptr);
+
+	// have an inner loop and an outer loop
+	// outer loop stops busy wait while no keys are pressed
+	// inner loop does realtime movement
+	quit_mutex.lock("enter keys timed loop");
+	do {
+		quit_mutex.unlock();
+
+		getch();
+
+		std::chrono::time_point<std::chrono::steady_clock> current_time =
+			std::chrono::steady_clock::now();
+		std::chrono::time_point<std::chrono::steady_clock> last_time =
+			current_time;
+		std::chrono::duration<double> delta;
+
+		bool key_pressed;
+		do {// inner loop
+			current_time = std::chrono::steady_clock::now();
+			key_pressed = false;
+
+			// get the 3 unit vectors relative to direction
+			direction_mutex.lock("keys timed copy dir");
+			v3d forward = direction;
+			direction_mutex.unlock();
+			// set forward vector to be not looking up or down
+			forward.y = 0; forward.normalise();
+			v3d up = v3d::Y;
+			v3d right = v3d::cross(forward, up);
+
+			if(has_key((int)'w') || has_key(KEY_UP)) {
+				key_pressed = true;
+				delta = current_time - last_time;
+				translation_mutex.lock("keys timed press w");
+				translation += forward * units_per_sec * delta.count();
+				translation_mutex.unlock();
+			}
+			if(has_key((int)'s') || has_key(KEY_DOWN)) {
+				key_pressed = true;
+				delta = current_time - last_time;
+				translation_mutex.lock("keys timed press s");
+				translation -= forward * units_per_sec * delta.count();
+				translation_mutex.unlock();
+			}
+			if(has_key((int)'a') || has_key(KEY_LEFT)) {
+				key_pressed = true;
+				delta = current_time - last_time;
+				translation_mutex.lock("keys timed press a");
+				translation -= right * units_per_sec * delta.count();
+				translation_mutex.unlock();
+			}
+			if(has_key((int)'d') || has_key(KEY_RIGHT)) {
+				key_pressed = true;
+				delta = current_time - last_time;
+				translation_mutex.lock("keys timed press d");
+				translation += right * units_per_sec * delta.count();
+				translation_mutex.unlock();
+			}
+			if(has_key((int)' ')) {
+				key_pressed = true;
+				delta = current_time - last_time;
+				translation_mutex.lock("keys timed press \" \"");
+				translation += up * units_per_sec * delta.count();
+				translation_mutex.unlock();
+			}
+			if(has_key((int)'c')) {
+				key_pressed = true;
+				delta = current_time - last_time;
+				translation_mutex.lock("keys timed press c");
+				translation -= up * units_per_sec * delta.count();
+				translation_mutex.unlock();
+			}
+
+			last_time = current_time;
+		} while(key_pressed);
+
+	quit_mutex.lock("continue keys timed loop");
+	} while(!quit);
+	quit_mutex.unlock();
+
+	return NULL;
+}
+
+void* keys_single(void *curse_shared_ptr) {
 	std::shared_ptr<curse> curses_ptr = *(std::shared_ptr<curse>*)(curse_shared_ptr);
 
 	//std::chrono::time_point<std::chrono::steady_clock> start_time = std::chrono::steady_clock::now();
 	//std::chrono::duration<double> time_delta;
 
-	std::chrono::time_point<std::chrono::steady_clock> current_time = std::chrono::steady_clock::now();
-	quit_mutex.lock("enter keys loop");
+	quit_mutex.lock("enter keys single loop");
 	do {
 		quit_mutex.unlock();
 		//time_delta = std::chrono::steady_clock::now() - start_time;
 		//mvprintw(0, 0, "time delta: %.0f", time_delta);
 
 
-		std::chrono::time_point<std::chrono::steady_clock> last_time = current_time;
-		current_time = std::chrono::steady_clock::now();
 
 
 		int key = getch();
 
 		// get the 3 unit vectors relative to direction
-		direction_mutex.lock("keys copy dir");
+#if 0
+		direction_mutex.lock("keys single copy dir");
 		v3d forward = direction;
 		direction_mutex.unlock();
 		// set forward vector to be not looking up or down
 		forward.y = 0; forward.normalise();
 		v3d up = v3d::Y;
 		v3d right = v3d::cross(forward, up);
+#endif
 
-		std::chrono::duration<double> delta;
+		//std::chrono::duration<double> delta;
 		switch(key) {
+#if 0
 			case KEY_UP:
 			case (int)'w':
 				delta = current_time - last_time;
@@ -230,6 +315,7 @@ void* keys(void *curse_shared_ptr) {
 				translation -= up * units_per_sec * delta.count();
 				translation_mutex.unlock();
 				break;
+#endif
 
 			case (int)'+':
 			case (int)'='://no shift held
@@ -633,7 +719,8 @@ int main(int argc, char **argv) {
 
 
 	pthread_t mouse_id;
-	pthread_t keys_id;
+	pthread_t keys_single_id;
+	pthread_t keys_timed_id;
 	{// start mouse and keyboard threads
 		pthread_attr_t thread_attibutes;
 		pthread_attr_init(&thread_attibutes);
@@ -645,7 +732,8 @@ int main(int argc, char **argv) {
 		if(!scripted_movement) {
 			std::string mouse_device = get_mouse_name((char*)"/proc/bus/input/devices");
 			pthread_create(&mouse_id, attr.get(), mouse, &mouse_device);
-			pthread_create(&keys_id, attr.get(), keys, &curse_ptr);
+			pthread_create(&keys_timed_id, attr.get(), keys_timed, &curse_ptr);
+			pthread_create(&keys_single_id, attr.get(), keys_single, &curse_ptr);
 			curses_enabled = true;
 		}
 	}
@@ -724,6 +812,7 @@ int main(int argc, char **argv) {
 
 	// start the loop
 	scripted_movement_controller scripter;
+	int &frame_num = scripter.frame_num;
 	quit_mutex.lock("main enter loop");
 	while(!quit) {
 		quit_mutex.unlock();
@@ -796,7 +885,7 @@ int main(int argc, char **argv) {
 #pragma GCC diagnostic pop
 				static_cast<PIXEL*>(&pix)->y = &y;
 
-				if(curses_enabled && x <= 200 && y <= 16 * num_lines)
+				if(curses_enabled && x <= 200 && (y<0?0:unsigned(y)) <= 16 * num_lines)
 					continue;
 
 #if USE_ARR_2D
@@ -845,7 +934,8 @@ int main(int argc, char **argv) {
 
 	if(!scripted_movement) {
 		pthread_join(mouse_id, nullptr);
-		pthread_join(keys_id, nullptr);
+		pthread_join(keys_single_id, nullptr);
+		pthread_join(keys_timed_id, nullptr);
 	}
 
 	return EXIT_SUCCESS;
