@@ -1,18 +1,20 @@
 #include "main.hpp"
 
 
-/** ray_cast to find out if a ray intersects with a sphere
+/** ray_cast to find out if a ray intersects with an object
  *
  * @param start    starting position of ray
  * @param dir      direction line is pointing
  *                   should be a unit vector
  *
- * @param hit_loc
- * @param hit_idx
+ * @param hit_loc  location of intersection
+ * @param hit_nrm  normal of plane that was intersected
+ *                   (not normalised)
+ * @param hit_idx  index of object that was hit
  * @return type
  */
 HIT::type ray_cast(const v3d& start, const v3d& dir,
-		v3d *hit_loc, unsigned int *hit_idx) {
+		v3d *hit_loc, v3d *hit_nrm, unsigned int *hit_idx) {
 #if DEBUG
 	assert(IS_APPROX_0(dir.length() - 1, 1e-6));
 #endif
@@ -25,6 +27,8 @@ HIT::type ray_cast(const v3d& start, const v3d& dir,
 
 		unsigned int min_idx = UINT_MAX;
 		double min_dist = DBL_MAX;
+		v3d normal_of_min;
+		v3d location_of_min;
 		for(unsigned int i = 0; i < num_spheres; i++) {
 			/*
 			 * from wikipedia:
@@ -65,13 +69,19 @@ HIT::type ray_cast(const v3d& start, const v3d& dir,
 					hit = HIT::sphere;
 					min_dist = d;
 					min_idx = i;
+
+					if(hit_loc || hit_nrm)
+						location_of_min = start + dir * min_dist;
+					if(hit_nrm)
+						normal_of_min = location_of_min - c;
 				}
 			}
 		}
 
 		if(hit == HIT::sphere) {
-			if(hit_loc) *hit_loc = start + dir * min_dist;
 			if(hit_idx) *hit_idx = min_idx;
+			if(hit_loc) *hit_loc = location_of_min;
+			if(hit_nrm) *hit_nrm = normal_of_min;
 		}
 	}
 
@@ -79,7 +89,79 @@ HIT::type ray_cast(const v3d& start, const v3d& dir,
 }
 
 
+/** ray_trace to find the colour of a particular light ray
+ *
+ * @param start
+ * @param dir
+ *
+ * @param limit
+ *
+ * @returns colour    TODO
+ */
+RGBT ray_trace(v3d start, v3d dir, unsigned int limit) {
+	struct hit {
+		int idx;
+		HIT::type type;
+		RGBT colour;
+		double reflectivity;
+	};
+	hit hits[limit];
+	unsigned max = 0;
+	v3d last_hit_dir;
 
+	for(unsigned i = 0; i < limit; i++) {
+		v3d hit_location = start;
+		v3d hit_normal;
+		unsigned int idx = 0;// init to stop compiler complaints
+		                     // (its taken care of by ray_cast function)
+
+		HIT::type type = ray_cast(hit_location, dir, &hit_location, &hit_normal, &idx);
+		if(type == HIT::undef) break;
+
+		//fprintf(stderr, "hit_normal(%.2f, %.2f, %.2f)\n", hit_normal.x, hit_normal.y, hit_normal.z);
+		hit_normal.normalise();//ray_cast does not normalise hit_normal
+
+		// reflect direction (normal should be normalised)
+		dir = dir - 2 * dir.dot(hit_normal) * hit_normal;
+		//fprintf(stderr, "hit_normal(%.2f, %.2f, %.2f)\n", hit_normal.x, hit_normal.y, hit_normal.z);
+		//fprintf(stderr, "dir(%.2f, %.2f, %.2f)\n", dir.x, dir.y, dir.z);
+		start = hit_location /* + dir * 0.001 */;// TODO check if you need to add that little thing
+
+		hits[i].idx = idx;
+		hits[i].type = type;
+		if(type == HIT::sphere) {
+			hits[i].colour = spheres[idx].col;
+			hits[i].reflectivity = 0.2;// TODO save this in the object we are looking at
+		}
+
+		max = i;
+		last_hit_dir = dir;
+	}
+
+	RGBT colour;
+	if(max == 0) {
+		// no hit
+		colour.r = (int)(255*dir.x);
+		colour.g = (int)(255*dir.y);
+		colour.b = (int)(255*dir.z);
+		colour.t = 0;
+	} else {
+		colour.r = (int)(255*last_hit_dir.x);
+		colour.g = (int)(255*last_hit_dir.y);
+		colour.b = (int)(255*last_hit_dir.z);
+		colour.t = 0;
+	}
+
+	// combine the colours based on reflectivity
+	for(unsigned i = max; i > 0; i--) {
+		colour.r = (hits[i].reflectivity) * hits[i].colour.r + hits[i].reflectivity * colour.r;
+		colour.g = (hits[i].reflectivity) * hits[i].colour.g + hits[i].reflectivity * colour.g;
+		colour.b = (hits[i].reflectivity) * hits[i].colour.b + hits[i].reflectivity * colour.b;
+		colour.t = (hits[i].reflectivity) * hits[i].colour.t + hits[i].reflectivity * colour.t;
+	}
+
+	return colour;
+}
 
 
 
@@ -741,9 +823,11 @@ int main(int argc, char **argv) {
 			translation_mutex.lock("main copy translation");
 			start = translation;
 			translation_mutex.unlock();
+#if 0 // don't actually need this
 			fov_mutex.lock("main copy fov");
 			hfov = fov;
 			fov_mutex.unlock();
+#endif
 		}
 
 		m44d camera_transform;
@@ -760,7 +844,7 @@ int main(int argc, char **argv) {
 
 
 		// setup the fov
-		double vfov = (hfov * fb->vinfo.yres) / fb->vinfo.xres;
+		//double vfov = (hfov * fb->vinfo.yres) / fb->vinfo.xres;
 
 
 		// calculate up and right directions
@@ -795,8 +879,11 @@ int main(int argc, char **argv) {
 #pragma GCC diagnostic pop
 				static_cast<PIXEL*>(&pix)->y = &y;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-compare"
 				if(curses_enabled && x <= 200 && y <= 16 * num_lines)
 					continue;
+#pragma GCC diagnostic pop
 
 #if USE_ARR_2D
 				v3d pixel_direction = pixel_dirs[x][y];
@@ -806,9 +893,10 @@ int main(int argc, char **argv) {
 				m41d dm(pixel_direction, 0);
 				v3d pixel_direction_rotated = camera_transform * dm;
 
+#if 0
 				unsigned int idx = 0;
 				//HIT::type hit = ray_cast(start, pix_dir_xy, nullptr, &idx);
-				HIT::type hit = ray_cast(start, pixel_direction_rotated, nullptr, &idx);
+				HIT::type hit = ray_cast(start, pixel_direction_rotated, nullptr, nullptr, &idx);
 				if(hit) {
 					if(idx == 0) {
 						pix.colour.r = 0;
@@ -823,9 +911,9 @@ int main(int argc, char **argv) {
 					}
 					draw(fb.get(), &pix);
 				} else {
-					pix.colour.r = (int)abs(255*pixel_direction_rotated.x);
-					pix.colour.g = (int)abs(255*pixel_direction_rotated.y);
-					pix.colour.b = (int)abs(255*pixel_direction_rotated.z);
+					pix.colour.r = (int)(255*pixel_direction_rotated.x);
+					pix.colour.g = (int)(255*pixel_direction_rotated.y);
+					pix.colour.b = (int)(255*pixel_direction_rotated.z);
 					pix.colour.t = 0;
 #if 0
 					pix.colour.r = (int)(255 * x) / fb->vinfo.xres;
@@ -835,6 +923,9 @@ int main(int argc, char **argv) {
 #endif
 					draw(fb.get(), &pix);
 				}
+#endif
+				pix.colour = ray_trace(start, pixel_direction_rotated, 3);
+				draw(fb.get(), &pix);
 			}
 		}
 

@@ -7,3 +7,8 @@ vgcore*
 .*.swp
 
 *.csv
+
+*.jpg
+*.pbm
+*.pgm
+*.ppm

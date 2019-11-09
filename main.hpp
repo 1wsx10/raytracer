@@ -103,14 +103,15 @@ namespace HIT {
 	};
 }
 
-typedef struct {
+struct sphere {
 	v3d c;//centre
 	double r;//radius
-} sphere;
+	RGBT col;//colour
+};
 
 sphere spheres[] = {
-	{v3d(0,0,0), 5},
-	{v3d(-4, 2.5, -3), 1},
+	{v3d(0,0,0), 5, {0,255,255,255}},
+	{v3d(-4, 2.5, -3), 1, {0,255,0,0}},
 };
 unsigned int num_spheres = sizeof(spheres) / sizeof(spheres[0]);
 

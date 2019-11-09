@@ -5,11 +5,12 @@ PROGRAM=a.out
 DFILERULES=-MMD -MP
 RTTI=-fno-rtti
 EXCEPTIONS=-fno-exceptions
-OPTIMISATIONS=-g
+#OPTIMISATIONS=-g
 #OPTIMISATIONS=-O0
 #OPTIMISATIONS=-O1
 #OPTIMISATIONS=-O2
 #OPTIMISATIONS=-O3
+OPTIMISATIONS= -Ofast -march=native
 # remove pedantic. this uses FB code, portability is already out the window
 CFLAGS= $(OPTIMISATIONS) $(RTTI) $(EXCEPTIONS) -std=c++2a -Wall $(DFILERULES)
 LDFLAGS=$(CFLAGS) -lncurses -lm -pthread
