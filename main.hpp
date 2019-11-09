@@ -12,6 +12,7 @@
 #include <cfloat>
 
 #include <ncurses.h>
+#define GETCH_BLOCK_TIME_MS 5
 
 #include <chrono>
 
@@ -25,6 +26,7 @@
 #include <regex.h>
 
 #include <pthread.h>
+#include <unistd.h>
 #include "mutex.hpp"
 
 #define DEBUG 1
@@ -84,7 +86,7 @@ const script_keyframe script[] = {
 	{50, pos_6, (v3d::zero - pos_6).normalise(), 90},
 };
 
-const double units_per_sec = 2;
+const double units_per_sec = 10;
 const char arg_onerender[] = "--one_render";
 const char arg_scripted[] = "--scripted";
 

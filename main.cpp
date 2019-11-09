@@ -165,18 +165,15 @@ void* keys(void *curse_shared_ptr) {
 	//std::chrono::duration<double> time_delta;
 
 	std::chrono::time_point<std::chrono::steady_clock> current_time = std::chrono::steady_clock::now();
+	std::chrono::time_point<std::chrono::steady_clock> last_time = current_time;
 	quit_mutex.lock("enter keys loop");
 	do {
 		quit_mutex.unlock();
-		//time_delta = std::chrono::steady_clock::now() - start_time;
-		//mvprintw(0, 0, "time delta: %.0f", time_delta);
 
-
-		std::chrono::time_point<std::chrono::steady_clock> last_time = current_time;
-		current_time = std::chrono::steady_clock::now();
-
-
+		last_time = current_time;
 		int key = getch();
+
+
 
 		// get the 3 unit vectors relative to direction
 		direction_mutex.lock("keys copy dir");
@@ -187,45 +184,42 @@ void* keys(void *curse_shared_ptr) {
 		v3d up = v3d::Y;
 		v3d right = v3d::cross(forward, up);
 
-		std::chrono::duration<double> delta;
+
+		current_time = std::chrono::steady_clock::now();
+		std::chrono::duration<double> delta = current_time - last_time;
+
 		switch(key) {
 			case KEY_UP:
 			case (int)'w':
-				delta = current_time - last_time;
 				translation_mutex.lock("keys press w");
 				translation += forward * units_per_sec * delta.count();
 				translation_mutex.unlock();
 				break;
 			case KEY_DOWN:
 			case (int)'s':
-				delta = current_time - last_time;
 				translation_mutex.lock("keys press s");
 				translation -= forward * units_per_sec * delta.count();
 				translation_mutex.unlock();
 				break;
 			case KEY_RIGHT:
 			case (int)'d':
-				delta = current_time - last_time;
 				translation_mutex.lock("keys press d");
 				translation += right * units_per_sec * delta.count();
 				translation_mutex.unlock();
 				break;
 			case KEY_LEFT:
 			case (int)'a':
-				delta = current_time - last_time;
 				translation_mutex.lock("keys press a");
 				translation -= right * units_per_sec * delta.count();
 				translation_mutex.unlock();
 				break;
 
 			case (int)' ':
-				delta = current_time - last_time;
 				translation_mutex.lock("keys press \" \"");
 				translation += up * units_per_sec * delta.count();
 				translation_mutex.unlock();
 				break;
 			case (int)'c':
-				delta = current_time - last_time;
 				translation_mutex.lock("keys press c");
 				translation -= up * units_per_sec * delta.count();
 				translation_mutex.unlock();
@@ -251,6 +245,10 @@ void* keys(void *curse_shared_ptr) {
 				quit_mutex.lock("keys request quit");
 				quit = true;
 				quit_mutex.unlock();
+				break;
+
+			case ERR:
+				// didn't block, just continued
 				break;
 		}
 
@@ -621,7 +619,7 @@ int main(int argc, char **argv) {
 		*   0: don't block, give err instead
 		*  >0: block for N ms, then give err
 		*/
-		timeout(-1);
+		timeout(GETCH_BLOCK_TIME_MS);
 		// makes input return immediately on every char, rather than buffering a line
 		cbreak();
 		// don't print characters
