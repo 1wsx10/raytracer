@@ -88,6 +88,59 @@ HIT::type ray_cast(const v3d& start, const v3d& dir,
 	return hit;
 }
 
+bool sphere::try_hit(const v3d& start, const v3d& dir,
+		v3d *hit_loc, v3d *hit_nrm) {
+#if DEBUG
+	assert(IS_APPROX_0(dir.length() - 1, 1e-6));
+#endif
+
+
+	/*
+	 * from wikipedia:
+	 *    https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
+	 *
+	 * c centre
+	 * r radius
+	 *
+	 * d distance along line intersection has occurred
+	 * l direction of line (unit vector)
+	 * o origin of line
+	 *
+	 * [x] = len of x
+	 * d = -(l(o-c)) +- sqrt((l(o-c))^2 - (([o-c]^2) - r^2))
+	 *
+	 * c_to_o = line from centre to origin
+	 * l(o-c) = lc_to_o = dot(line, c_to_o)
+	 */
+
+	v3d o = start;
+	v3d l = dir;
+	double d;
+
+	v3d c_to_o = o - c;
+	double lc_to_o = l.dot(o-c);
+
+	double discriminant = (lc_to_o*lc_to_o - ((c_to_o).length_squared() - r*r));
+
+	// 1 or more sol'ns
+	if(discriminant >= 0) {
+
+		double sqrt_discrim = sqrt(discriminant);
+		d = fmin(-lc_to_o + sqrt_discrim, -lc_to_o - sqrt_discrim);
+
+		if(hit_loc) {
+			*hit_loc = start + dir * d;
+			if(hit_nrm)
+				*hit_nrm = *hit_loc - c;
+
+		} if(hit_nrm)
+		*hit_nrm = (start + dir * d) - c;
+		return true;
+	}
+
+	return false;
+}
+
 
 /** ray_trace to find the colour of a particular light ray
  *
