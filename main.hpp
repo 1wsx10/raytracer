@@ -30,7 +30,7 @@
 #include "mutex.hpp"
 
 #define DEBUG 1
-#define IS_APPROX_0(X, DELTA) (abs(X) < (DELTA))
+#define IS_APPROX_0(X, DELTA) (fabs(X) < (DELTA))
 
 
 mutex direction_mutex("direction_mutex");
@@ -105,14 +105,15 @@ namespace HIT {
 
 struct shape {
 	RGBT col;
+	v3d props; // reflection, refraction, diffusion
+	           // should be normalised
 
-	shape(const RGBT &col) : col(col) {};
+	shape(const RGBT &colour, const v3d& light_properties) :
+		col(colour), props(light_properties) {};
 
-	v3d light_properties; //reflection, refraction, diffusion
-	                      // should be normalised
-	v3d get_reflected();
-	v3d get_refracted();
-	v3d get_diffused();
+	bool get_reflected(const v3d& start, const v3d& dir, v3d& out);
+	v3d get_refracted();//TODO
+	v3d get_diffused();//TODO
 
 	/** ray_cast to find out if a ray intersects with this object
 	 *
@@ -127,24 +128,25 @@ struct shape {
 	 * @return type
 	 */
 	virtual bool try_hit(const v3d& start, const v3d& dir,
-			v3d *hit_loc, v3d *hit_nrm) = 0;
+			v3d *hit_loc, v3d *hit_nrm, double *hit_dist) = 0;
 };
 
 struct sphere : public shape {
 	v3d c;//centre
 	double r;//radius
 
-	sphere(const v3d& c, const double& r, const RGBT &col) :
-		shape(col), c(c), r(r) {};
+	sphere(const v3d& c, const double& r,
+			const RGBT &col, const v3d& props)
+		: shape(col, props), c(c), r(r) {};
 
 	bool try_hit(const v3d& start, const v3d& dir,
-			v3d *hit_loc, v3d *hit_nrm) override;
+			v3d *hit_loc, v3d *hit_nrm, double *hit_dist) override;
 };
 
 sphere spheres[] = {
 	//     centre     radius    colour
-	sphere(v3d(0,0,0), 5, {0,255,255,255}),
-	sphere(v3d(-4, 2.5, -3), 1, {0,255,0,0}),
+	sphere(v3d(0,0,0), 5, {0,255,255,255}, v3d(1,0,0)),
+	sphere(v3d(-4, 2.5, -3), 1, {0,255,0,0}, v3d(1,0,0)),
 };
 unsigned int num_spheres = sizeof(spheres) / sizeof(spheres[0]);
 

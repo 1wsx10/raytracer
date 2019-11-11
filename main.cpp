@@ -88,8 +88,57 @@ HIT::type ray_cast(const v3d& start, const v3d& dir,
 	return hit;
 }
 
+HIT::type OO_ray_cast(const v3d& start, const v3d& dir,
+		v3d *hit_loc, v3d *hit_nrm, unsigned int *hit_idx) {
+#if DEBUG
+	assert(IS_APPROX_0(dir.length() - 1, 1e-6));
+#endif
+
+	HIT::type hit = HIT::undef;
+
+
+	unsigned int min_idx = UINT_MAX;
+	double min_dist = DBL_MAX;
+	v3d normal_of_min;
+	v3d location_of_min;
+	{// spheres
+		//timer time_spheres("ray spheres");
+
+		for(unsigned int i = 0; i < num_spheres; i++) {
+
+			v3d hit_loc, ihit_nrm;
+			double hit_dist;
+			if(!spheres[i].try_hit(start, dir, &hit_loc,
+						hit_nrm ? &ihit_nrm : nullptr, &hit_dist))
+				continue;
+
+			if(hit_dist < min_dist) {
+				hit = HIT::sphere;
+				min_dist = hit_dist;
+				min_idx = i;
+
+				if(hit_loc) {
+					location_of_min = hit_loc;
+					if(hit_nrm)
+						normal_of_min = ihit_nrm;
+				} else if(hit_nrm) {
+					normal_of_min = ihit_nrm;
+				}
+			}
+		}
+	}
+
+	if(hit == HIT::sphere) {
+		if(hit_idx) *hit_idx = min_idx;
+		if(hit_loc) *hit_loc = location_of_min;
+		if(hit_nrm) *hit_nrm = normal_of_min;
+	}
+
+	return hit;
+}
+
 bool sphere::try_hit(const v3d& start, const v3d& dir,
-		v3d *hit_loc, v3d *hit_nrm) {
+		v3d *hit_loc, v3d *hit_nrm, double *hit_dist) {
 #if DEBUG
 	assert(IS_APPROX_0(dir.length() - 1, 1e-6));
 #endif
@@ -128,16 +177,35 @@ bool sphere::try_hit(const v3d& start, const v3d& dir,
 		double sqrt_discrim = sqrt(discriminant);
 		d = fmin(-lc_to_o + sqrt_discrim, -lc_to_o - sqrt_discrim);
 
-		if(hit_loc) {
-			*hit_loc = start + dir * d;
-			if(hit_nrm)
-				*hit_nrm = *hit_loc - c;
+		if(d > 0) {
+			if(hit_loc) {
+				*hit_loc = start + dir * d;
+				if(hit_nrm)
+					*hit_nrm = *hit_loc - c;
 
-		} if(hit_nrm)
-		*hit_nrm = (start + dir * d) - c;
-		return true;
+			} if(hit_nrm)
+			*hit_nrm = (start + dir * d) - c;
+			*hit_dist = d;
+			return true;
+		}
 	}
 
+	return false;
+}
+
+bool shape::get_reflected(const v3d& start, const v3d& dir, v3d& out)
+{
+	v3d hit_loc, hit_nrm;
+	if(try_hit(start, dir, &hit_loc, &hit_nrm, nullptr)) {
+
+
+		hit_nrm.try_normalise();//ray_cast does not normalise hit_nrm
+
+		// reflect direction (normal should be normalised)
+		out = dir - 2 * dir.dot(hit_nrm) * hit_nrm;
+
+		return true;
+	}
 	return false;
 }
 
@@ -152,6 +220,71 @@ bool sphere::try_hit(const v3d& start, const v3d& dir,
  * @returns colour    TODO
  */
 RGBT ray_trace(v3d start, v3d dir, unsigned int limit) {
+	struct hit {
+		int idx;
+		HIT::type type;
+		RGBT colour;
+		double reflectivity;
+	};
+	hit hits[limit];
+	unsigned max = 0;
+	v3d last_hit_dir;
+
+	for(unsigned i = 0; i < limit; i++) {
+		v3d hit_location = start;
+		v3d hit_normal;
+		unsigned int idx = 0;// init to stop compiler complaints
+		                     // (its taken care of by ray_cast function)
+
+		HIT::type type = ray_cast(hit_location, dir, &hit_location, &hit_normal, &idx);
+		if(type == HIT::undef) break;
+
+		//fprintf(stderr, "hit_normal(%.2f, %.2f, %.2f)\n", hit_normal.x, hit_normal.y, hit_normal.z);
+		hit_normal.normalise();//ray_cast does not normalise hit_normal
+
+		// reflect direction (normal should be normalised)
+		dir = dir - 2 * dir.dot(hit_normal) * hit_normal;
+		//fprintf(stderr, "hit_normal(%.2f, %.2f, %.2f)\n", hit_normal.x, hit_normal.y, hit_normal.z);
+		//fprintf(stderr, "dir(%.2f, %.2f, %.2f)\n", dir.x, dir.y, dir.z);
+		start = hit_location /* + dir * 0.001 */;// TODO check if you need to add that little thing
+
+		hits[i].idx = idx;
+		hits[i].type = type;
+		if(type == HIT::sphere) {
+			hits[i].colour = spheres[idx].col;
+			hits[i].reflectivity = 0.2;// TODO save this in the object we are looking at
+		}
+
+		max = i;
+		last_hit_dir = dir;
+	}
+
+	RGBT colour;
+	if(max == 0) {
+		// no hit
+		colour.r = (int)(255*dir.x);
+		colour.g = (int)(255*dir.y);
+		colour.b = (int)(255*dir.z);
+		colour.t = 0;
+	} else {
+		colour.r = (int)(255*last_hit_dir.x);
+		colour.g = (int)(255*last_hit_dir.y);
+		colour.b = (int)(255*last_hit_dir.z);
+		colour.t = 0;
+	}
+
+	// combine the colours based on reflectivity
+	for(unsigned i = max; i > 0; i--) {
+		colour.r = (hits[i].reflectivity) * hits[i].colour.r + hits[i].reflectivity * colour.r;
+		colour.g = (hits[i].reflectivity) * hits[i].colour.g + hits[i].reflectivity * colour.g;
+		colour.b = (hits[i].reflectivity) * hits[i].colour.b + hits[i].reflectivity * colour.b;
+		colour.t = (hits[i].reflectivity) * hits[i].colour.t + hits[i].reflectivity * colour.t;
+	}
+
+	return colour;
+}
+
+RGBT OO_ray_trace(v3d start, v3d dir, unsigned int limit) {
 	struct hit {
 		int idx;
 		HIT::type type;
