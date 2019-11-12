@@ -99,21 +99,58 @@ bool curses_enabled = false;
 namespace HIT {
 	enum type {
 		undef = 0,
-		sphere = 1,
+		sphere,
+		plane,
+		rect,
 	};
 }
 
-struct sphere {
-	v3d c;//centre
-	double r;//radius
+struct shape {
 	RGBT col;//colour
 };
 
+struct plane : public shape {
+	v3d pos;//position
+	v3d dir;//direction
+
+	plane(const RGBT& col, const v3d& pos, const v3d& dir)
+		: shape{col}, pos(pos), dir(dir) {};
+};
+
+struct rect : plane {
+	double w;//width
+	double h;//height
+	double r;//rotation, radians
+
+	rect(const RGBT& col, const v3d& pos, const v3d& dir,
+			double w, double h, double r)
+		: plane(col, pos, dir),
+		w(w), h(h), r(r) {};
+};
+
+struct sphere : public shape {
+	v3d c;//centre
+	double r;//radius
+
+	sphere(const RGBT& col, const v3d& c, double r)
+		: shape{col}, c(c), r(r) {};
+};
+
 sphere spheres[] = {
-	{v3d(0,0,0), 5, {0,255,255,255}},
-	{v3d(-4, 2.5, -3), 1, {0,255,0,0}},
+	sphere({0,255,255,255}, v3d(0,0,0), 5),
+	sphere({0,255,0,0}, v3d(-4, 2.5, -3), 1),
 };
 unsigned int num_spheres = sizeof(spheres) / sizeof(spheres[0]);
+
+plane planes[] = {
+	plane({0,0,255,0}, v3d(0,-2,0), v3d(0,1,0)),
+};
+unsigned int num_planes = sizeof(planes) / sizeof(planes[0]);
+
+rect rects[] = {
+	rect({255,0,0,0}, v3d(0,0,3), v3d(0,0,-1), 1,1,0),
+};
+unsigned int num_rects = sizeof(rects) / sizeof(rects[0]);
 
 
 class curse {
