@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <utility>
 
 #include "lib/vector/vector.h"
 
@@ -9,6 +10,17 @@ class m14d;
 class vector;
 class point;
 
+#if 0 // TODO
+template <size_t dim>
+class msd {
+	// square matrixd
+	public:
+		static const msd<dim> zero;
+		static const msd<dim> unit;
+
+		double n[dim][dim];
+};
+#endif
 
 class m44d {
 	public:
@@ -54,6 +66,19 @@ class m44d {
 
 		m44d& transpose();
 		static m44d transposition(const m44d&);
+
+		/* elementary row operations for gaussian elimination
+		 */
+		template<size_t row>
+			void multiply_row(m44d& rhs, double n);
+
+		template<size_t a, size_t b>
+			void swap_rows(m44d& rhs);
+
+		template<size_t from, size_t to>
+			void add_row(m44d& rhs, double n);
+		//==============================================
+
 
 		bool operator==(const m44d&) const;
 		bool operator!=(const m44d&) const;
