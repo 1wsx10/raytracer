@@ -442,9 +442,8 @@ m44d m44d::transposition(const m44d &other) {
 
 // elementary row operations for gaussian elimination
 
-template<size_t row>
-void m44d::multiply_row(m44d& rhs, double n) {
-	static_assert(row <= 4, "out of bounds");
+void m44d::multiply_row(m44d& rhs, size_t row, double n) {
+	assert(row <= 4);
 
 	for(size_t i = 0; i < 4; i++) {
 		this->n[i][row] *= n;
@@ -452,10 +451,10 @@ void m44d::multiply_row(m44d& rhs, double n) {
 	}
 }
 
-template<size_t a, size_t b>
-void m44d::swap_rows(m44d& rhs) {
-	static_assert(a <= 4, "out of bounds");
-	static_assert(b <= 4, "out of bounds");
+void m44d::swap_rows(m44d& rhs, size_t a, size_t b) {
+	assert(a <= 4);
+	assert(b <= 4);
+	if(a == b) return;
 
 	for(size_t i = 0; i < 4; i++) {
 		std::swap<double>(n[i][a], n[i][b]);
@@ -463,70 +462,14 @@ void m44d::swap_rows(m44d& rhs) {
 	}
 }
 
-template<> void m44d::swap_rows<0,0>(m44d& rhs) {}
-template<> void m44d::swap_rows<1,1>(m44d& rhs) {}
-template<> void m44d::swap_rows<2,2>(m44d& rhs) {}
-template<> void m44d::swap_rows<3,3>(m44d& rhs) {}
-
-template<size_t from, size_t to>
-void m44d::add_row(m44d& rhs, double n) {
-	static_assert(from <= 4, "out of bounds");
-	static_assert(to <= 4, "out of bounds");
+void m44d::add_row(m44d& rhs, size_t from, size_t to, double n) {
+	assert(from <= 4);
+	assert(to <= 4);
 
 	for(size_t i = 0; i < 4; i++) {
 		this->n[i][to] += this->n[i][from] * n;
 		rhs[i][to] += rhs[i][from] * n;
 	}
-}
-
-void do_templates() {
-	m44d asdf = m44d::unit;
-	m44d fdsa = m44d::unit;
-
-	asdf.multiply_row<0>(fdsa, 1);
-	asdf.multiply_row<1>(fdsa, 1);
-	asdf.multiply_row<2>(fdsa, 1);
-	asdf.multiply_row<3>(fdsa, 1);
-
-	asdf.swap_rows<0,0>(fdsa);
-	asdf.swap_rows<0,1>(fdsa);
-	asdf.swap_rows<0,2>(fdsa);
-	asdf.swap_rows<0,3>(fdsa);
-
-	asdf.swap_rows<1,0>(fdsa);
-	asdf.swap_rows<1,1>(fdsa);
-	asdf.swap_rows<1,2>(fdsa);
-	asdf.swap_rows<1,3>(fdsa);
-
-	asdf.swap_rows<2,0>(fdsa);
-	asdf.swap_rows<2,1>(fdsa);
-	asdf.swap_rows<2,2>(fdsa);
-	asdf.swap_rows<2,3>(fdsa);
-
-	asdf.add_row<3,0>(fdsa, 1);
-	asdf.add_row<3,1>(fdsa, 1);
-	asdf.add_row<3,2>(fdsa, 1);
-	asdf.add_row<3,3>(fdsa, 1);
-
-	asdf.add_row<0,0>(fdsa, 1);
-	asdf.add_row<0,1>(fdsa, 1);
-	asdf.add_row<0,2>(fdsa, 1);
-	asdf.add_row<0,3>(fdsa, 1);
-
-	asdf.add_row<1,0>(fdsa, 1);
-	asdf.add_row<1,1>(fdsa, 1);
-	asdf.add_row<1,2>(fdsa, 1);
-	asdf.add_row<1,3>(fdsa, 1);
-
-	asdf.add_row<2,0>(fdsa, 1);
-	asdf.add_row<2,1>(fdsa, 1);
-	asdf.add_row<2,2>(fdsa, 1);
-	asdf.add_row<2,3>(fdsa, 1);
-
-	asdf.add_row<3,0>(fdsa, 1);
-	asdf.add_row<3,1>(fdsa, 1);
-	asdf.add_row<3,2>(fdsa, 1);
-	asdf.add_row<3,3>(fdsa, 1);
 }
 
 // m44d operators (non scalar)

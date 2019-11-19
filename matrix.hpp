@@ -69,14 +69,11 @@ class m44d {
 
 		/* elementary row operations for gaussian elimination
 		 */
-		template<size_t row>
-			void multiply_row(m44d& rhs, double n);
+		void multiply_row(m44d& rhs, size_t row, double n);
 
-		template<size_t a, size_t b>
-			void swap_rows(m44d& rhs);
+		void swap_rows(m44d& rhs, size_t a, size_t b);
 
-		template<size_t from, size_t to>
-			void add_row(m44d& rhs, double n);
+		void add_row(m44d& rhs, size_t from, size_t to, double n);
 		//==============================================
 
 
