@@ -150,7 +150,22 @@ BOOST_AUTO_TEST_CASE(test_44_determinant)
 
 BOOST_AUTO_TEST_CASE(test_44_inverse)
 {
-	BOOST_CHECK(false);//TODO
+	m44d to_invert =
+	{{{3,2,3,4},
+		 {5,6,7,8},
+		 {9,10,11,12},
+		 {13,14,15,16}}};
+	m44d copy = to_invert;
+
+	std::cout << to_invert[0][0] << " " << to_invert[0][1] << " " << to_invert[0][2] << " " << to_invert[0][3] << std::endl;
+
+	bool works = to_invert.invert();
+
+	std::cout  << to_invert.det() << "\n\n" << to_invert << std::endl;
+
+	std::cout  << "\n\nshould_unit:\n" << copy*to_invert << std::endl;
+
+	BOOST_CHECK(works);
 }
 
 BOOST_AUTO_TEST_CASE(test_44_transpose)

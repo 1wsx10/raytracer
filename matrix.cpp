@@ -2,6 +2,7 @@
 #include <utility>
 #include <cstring>
 #include <cassert>
+#include <queue>
 
 
 /** m1d class
@@ -391,11 +392,58 @@ double m44d::det() const {
 
 bool m44d::invert() {
 	double determinant = det();
-	if(determinant == 0) {
+	if(false && determinant == 0) {
 		return false;
 	}
+	for(size_t i = 0; i < 4; i++) {
+		if(n[i][i] == 0) return false;
+	}
 
-	assert(false);//TODO
+
+	m44d lhs = *this;
+	m44d rhs = m44d::unit;
+
+	std::cout << "before\n" << lhs << std::endl;
+
+	for(size_t k = 0; k < 3; k++) {
+		if(lhs[k][k] == 0) {
+			return false;
+		}
+		for(size_t i = k+1; i < 4; i++) {
+			double m_ik = lhs[i][k] / lhs[k][k];
+			// subtract m_ik * row(k) from row(i)
+			lhs.add_row(rhs, k, i, -1 * m_ik);
+		}
+
+		std::cout << "k:"<<k<<"\n" << lhs << std::endl;
+	}
+	std::cout << "after first:\n" << lhs << std::endl;
+
+	// make the leading diagonal 1s
+	for(size_t i = 0; i < 4; i++) {
+		if(lhs[i][i] == 0) return false;
+		lhs.multiply_row(rhs, i, 1/lhs[i][i]);
+	}
+	std::cout << "normalized:\n" << lhs << std::endl;
+
+	// now we have an upper triangular matrix with the main diagonal
+	// being 1s
+	/*  [1???]
+	 *  [01??]
+	 *  [001?]
+	 *  [0001]
+	 */
+	for(size_t k = 3; k > 0; k--) {
+		for(size_t i = 0; i < k; i++) {
+			lhs.add_row(rhs, k, i, -1 * lhs[i][k]);
+		}
+		std::cout << "k:"<<k<<"\n" << lhs << std::endl;
+	}
+	std::cout << "after last:\n" << lhs << std::endl;
+	std::cout << "rhs:\n" << rhs << std::endl;
+
+	*this = rhs;
+
 	return true;
 }
 
@@ -446,8 +494,8 @@ void m44d::multiply_row(m44d& rhs, size_t row, double n) {
 	assert(row <= 4);
 
 	for(size_t i = 0; i < 4; i++) {
-		this->n[i][row] *= n;
-		rhs[i][row] *= n;
+		this->n[row][i] *= n;
+		rhs[row][i] *= n;
 	}
 }
 
@@ -467,8 +515,8 @@ void m44d::add_row(m44d& rhs, size_t from, size_t to, double n) {
 	assert(to <= 4);
 
 	for(size_t i = 0; i < 4; i++) {
-		this->n[i][to] += this->n[i][from] * n;
-		rhs[i][to] += rhs[i][from] * n;
+		this->n[to][i] += this->n[from][i] * n;
+		rhs[to][i] += rhs[from][i] * n;
 	}
 }
 
