@@ -361,8 +361,50 @@ inline double det3(
 	return ret;
 }
 
+bool has_zero_row_or_col(const m44d& mat) {
+	for(int i = 0; i < 4; i++) {
+		if(mat[i][i] == 0) {
+			{//row
+				if(mat[0][i] != 0) goto no_row;
+				if(mat[1][i] != 0) goto no_row;
+				if(mat[2][i] != 0) goto no_row;
+				if(mat[3][i] != 0) goto no_row;
+				return true;
+			}
+no_row:
+			{//column
+				if(mat[i][0] != 0) continue;
+				if(mat[i][1] != 0) continue;
+				if(mat[i][2] != 0) continue;
+				if(mat[i][3] != 0) continue;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool has_equal_row_or_col(const m44d& mat) {
+}
+
 // determinant
 double m44d::det() const {
+
+	/* determinant is 0 in any of these cases:
+	 *
+	 *   the matrix has a row or column with each element == 0
+	 *   the matrix has two or more equal rows,
+	 *     or two or more equal columns
+	 *   two the matrix has two or more proportional rows,
+	 *     or two or more proportional columns
+	 *   a row is the sum or difference of other rows,
+	 *     or a column is the sum or difference of other columns
+	 *
+	 */
+
+	if(has_zero_row_or_col(*this)) return 0;
+
+
 	//TODO better determinant, LU algorithm
 	double det = 0;
 	det += n[0][0] * det3(
