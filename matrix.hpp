@@ -4,6 +4,8 @@
 #include <utility>
 
 #include "lib/vector/vector.h"
+#include <cmath>
+#define IS_APPROX_0(X, DELTA) (fabs(X) < (DELTA))
 
 class m41d;
 class m14d;
@@ -76,6 +78,8 @@ class m44d {
 		void add_row(m44d& rhs, size_t from, size_t to, double n);
 		//==============================================
 
+		bool equals(const m44d& other, double delta) const;
+		static bool equals(const m44d& a, const m44d& b, double delta);
 
 		bool operator==(const m44d&) const;
 		bool operator!=(const m44d&) const;

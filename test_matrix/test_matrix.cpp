@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(test_44_make_tx)
 		v3d& asdf_v = asdf;
 
 		asdf = translate_3_x * asdf;
-		std::cout << "asdf: "<<asdf_v<<std::endl;
+		//std::cout << "asdf: "<<asdf_v<<std::endl;
 
 		BOOST_TEST(translate_3_x == translate_3_x_precalc,
 				"translate_3_x = "<< translate_3_x << "\n" <<
@@ -150,22 +150,143 @@ BOOST_AUTO_TEST_CASE(test_44_determinant)
 
 BOOST_AUTO_TEST_CASE(test_44_inverse)
 {
+	/*
 	m44d to_invert =
 	{{{3,2,3,4},
 		 {5,6,7,8},
 		 {9,10,11,12},
 		 {13,14,15,16}}};
+	*/
+	m44d to_invert =
+	{{{1,2,3,-1},
+		 {2,3,-3,-1},
+		 {2,-1,2,3},
+		 {3,2,-4,3}}};
 	m44d copy = to_invert;
 
+	/*
 	std::cout << to_invert[0][0] << " " << to_invert[0][1] << " " << to_invert[0][2] << " " << to_invert[0][3] << std::endl;
+	std::cout << to_invert << std::endl;
+	*/
 
 	bool works = to_invert.invert();
+	BOOST_TEST(works, "no inverse..?");
 
-	std::cout  << to_invert.det() << "\n\n" << to_invert << std::endl;
 
-	std::cout  << "\n\nshould_unit:\n" << copy*to_invert << std::endl;
+	m44d copy_times = copy * to_invert;
+	m44d times_copy = to_invert * copy;
+	BOOST_TEST(copy_times.equals(m44d::unit, 1e-10), "should be unit:" << copy_times);
+	BOOST_TEST(times_copy.equals(m44d::unit, 1e-10), "should be unit:" << times_copy);
+}
 
-	BOOST_CHECK(works);
+BOOST_AUTO_TEST_CASE(test_44_row_multiply)
+{
+	m44d A =
+	{{ {1,2,3,4},
+		 {5,6,7,8},
+		 {9,10,11,12},
+		 {13,14,15,16}}};
+	m44d B = m44d::unit;
+	m44d B_copy = m44d::unit;
+
+
+	m44d A_after_first =
+	{{ {1/2.0,2/2.0,3/2.0,4/2.0},
+		 {5,6,7,8},
+		 {9,10,11,12},
+		 {13,14,15,16}}};
+	A.multiply_row(B, 0, 0.5);
+	BOOST_CHECK(A == A_after_first);
+	B_copy[0][0] *= 0.5;
+	BOOST_CHECK(B == B_copy);
+
+	m44d A_after_second =
+	{{ {1/2.0,2/2.0,3/2.0,4/2.0},
+		 {10,12,14,16},
+		 {9,10,11,12},
+		 {13,14,15,16}}};
+	A.multiply_row(B, 1, 2);
+	BOOST_CHECK(A == A_after_second);
+	B_copy[1][1] *= 2;
+	BOOST_CHECK(B == B_copy);
+
+	m44d A_after_third =
+	{{ {1/2.0,2/2.0,3/2.0,4/2.0},
+		 {10,12,14,16},
+		 {27,30,33,36},
+		 {13,14,15,16}}};
+	A.multiply_row(B, 2, 3);
+	BOOST_CHECK(A == A_after_third);
+	B_copy[2][2] *= 3;
+	BOOST_CHECK(B == B_copy);
+
+	m44d A_after_fourth =
+	{{ {1/2.0,2/2.0,3/2.0,4/2.0},
+		 {10,12,14,16},
+		 {27,30,33,36},
+		 {13*11/10.0,14*11/10.0,15*11/10.0,16*11/10.0}}};
+	A.multiply_row(B, 3, 11/10.0);
+	BOOST_TEST(A.equals(A_after_fourth, 1e-10), "A:" << A << "A_after_fourth" << A_after_fourth << B);
+	B_copy[3][3] *= 11/10.0;
+	BOOST_CHECK(B == B_copy);
+}
+BOOST_AUTO_TEST_CASE(test_44_row_swap)
+{
+	m44d A =
+	{{ {1,2,3,4},
+		 {5,6,7,8},
+		 {9,10,11,12},
+		 {13,14,15,16}}};
+	m44d A_COPY = A;
+	m44d B = m44d::unit;
+
+	for(size_t a = 0; a < 4; a++) {
+		for(size_t b = 0; b < 4; b++) {
+			A.swap_rows(B, a, b);
+			for(size_t c/*olumn*/ = 0; c < 4; c++) {
+				double temp = A_COPY[a][c];
+				A_COPY[a][c] = A_COPY[b][c];
+				A_COPY[b][c] = temp;
+
+				// swab B back, so it should always be unit
+				if(a != b) {
+					B[b][c] += B[a][c];
+					B[a][c] = B[b][c] - B[a][c];
+					B[b][c] -= B[a][c];
+				}
+			}
+			BOOST_TEST(A == A_COPY, "A:" << A << "should be: " << A_COPY);
+			BOOST_TEST(B == m44d::unit, "B:" << B << "should be unit");
+		}
+	}
+}
+BOOST_AUTO_TEST_CASE(test_44_row_add)
+{
+	m44d A =
+	{{ {1,2,3,4},
+		 {5,6,7,8},
+		 {9,10,11,12},
+		 {13,14,15,16}}};
+	m44d B = m44d::unit;
+	m44d B_copy = B;
+
+	// rand returns value between 0 and RAND_MAX
+	static_assert(RAND_MAX <= SIZE_MAX, "rand value needs to be compared with size_t");
+	for(int count = 0; count < 10; count++) {
+		size_t from = (size_t)rand()%4;
+		size_t to = (size_t)rand()%4;
+		double scalar = rand()%100 - 50;
+		m44d A_copy = A;
+
+		A.add_row(B, from, to, scalar);
+
+		for(int c/*olumn*/ = 0; c < 4; c++) {
+			A_copy[to][c] += A_copy[from][c] * scalar;
+			B_copy[to][c] += B_copy[from][c] * scalar;
+		}
+		BOOST_TEST(A == A_copy, "A:" << A << "should be: " << A_copy);
+		BOOST_TEST(B == B_copy, "B:" << B << "should be: " << B_copy);
+	}
 }
 
 BOOST_AUTO_TEST_CASE(test_44_transpose)

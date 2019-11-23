@@ -2,7 +2,7 @@
 #include <utility>
 #include <cstring>
 #include <cassert>
-#include <queue>
+#include <vector>
 
 
 /** m1d class
@@ -391,40 +391,62 @@ double m44d::det() const {
 
 
 bool m44d::invert() {
-	double determinant = det();
-	if(false && determinant == 0) {
-		return false;
-	}
-	for(size_t i = 0; i < 4; i++) {
-		if(n[i][i] == 0) return false;
-	}
+#define M44D_INVERT_PRINT 0
 
+	m44d lhs;
+	m44d rhs;
 
-	m44d lhs = *this;
-	m44d rhs = m44d::unit;
+	// non-DFS method
 
-	std::cout << "before\n" << lhs << std::endl;
+	lhs = *this;
+	rhs = m44d::unit;
 
-	for(size_t k = 0; k < 3; k++) {
-		if(lhs[k][k] == 0) {
+#if M44D_INVERT_PRINT
+		std::cout << "inverse starting:" << lhs << std::endl;
+#endif
+
+	for(size_t d/*iagonal*/ = 0; d < 3; d++) {
+		size_t max_row = d;
+		double max = fabs(lhs[d][d]);
+		// make the leading diagonal be the greatest
+		for(size_t r/*ow*/ = d+1; r < 4; r++) {
+			if(double temp = fabs(lhs[r][d]) > max) {
+				max = temp;
+				max_row = r;
+			}
+		}
+		lhs.swap_rows(rhs, d, max_row);
+#if M44D_INVERT_PRINT
+			printf("swap r%lu and r%lu\n", d, max_row);
+#endif
+
+		if(IS_APPROX_0(lhs[d][d], 1e-10)) {
 			return false;
 		}
-		for(size_t i = k+1; i < 4; i++) {
-			double m_ik = lhs[i][k] / lhs[k][k];
-			// subtract m_ik * row(k) from row(i)
-			lhs.add_row(rhs, k, i, -1 * m_ik);
+		for(size_t r/*ow*/ = d+1; r < 4; r++) {
+			double m_ik = lhs[r][d] / lhs[d][d];
+			// subtract m_ik * row(d) from row(r)
+			lhs.add_row(rhs, d, r, -1 * m_ik);
+#if M44D_INVERT_PRINT
+			printf("subtract r%lu * %.2f from r%lu\n", d, m_ik, r);
+#endif
+			// [r][d] should be 0, but there may be floating point error
+			lhs[r][d] = 0;
 		}
 
-		std::cout << "k:"<<k<<"\n" << lhs << std::endl;
+#if M44D_INVERT_PRINT
+		std::cout << "d:"<<d<<"\n" << lhs << std::endl;
+#endif
 	}
-	std::cout << "after first:\n" << lhs << std::endl;
 
 	// make the leading diagonal 1s
 	for(size_t i = 0; i < 4; i++) {
-		if(lhs[i][i] == 0) return false;
+		if(IS_APPROX_0(lhs[i][i], 1e-10)) return false;
 		lhs.multiply_row(rhs, i, 1/lhs[i][i]);
 	}
+#if M44D_INVERT_PRINT
 	std::cout << "normalized:\n" << lhs << std::endl;
+#endif
 
 	// now we have an upper triangular matrix with the main diagonal
 	// being 1s
@@ -433,18 +455,25 @@ bool m44d::invert() {
 	 *  [001?]
 	 *  [0001]
 	 */
-	for(size_t k = 3; k > 0; k--) {
-		for(size_t i = 0; i < k; i++) {
-			lhs.add_row(rhs, k, i, -1 * lhs[i][k]);
+	for(size_t d/*iagonal*/ = 3; d > 0; d--) {
+		for(size_t r/*ow*/ = 0; r < d; r++) {
+			lhs.add_row(rhs, d, r, -1 * lhs[r][d]);
+#if M44D_INVERT_PRINT
+			printf("subtract r%lu * %.2f from r%lu\n", d, lhs[r][d], r);
+#endif
 		}
-		std::cout << "k:"<<k<<"\n" << lhs << std::endl;
+#if M44D_INVERT_PRINT
+		std::cout << "d:"<<d<<"\n" << lhs << std::endl;
+#endif
 	}
-	std::cout << "after last:\n" << lhs << std::endl;
+#if M44D_INVERT_PRINT
 	std::cout << "rhs:\n" << rhs << std::endl;
+#endif
 
 	*this = rhs;
 
 	return true;
+#undef M44D_INVERT_PRINT
 }
 
 bool m44d::inverse(m44d &out) {
@@ -490,12 +519,12 @@ m44d m44d::transposition(const m44d &other) {
 
 // elementary row operations for gaussian elimination
 
-void m44d::multiply_row(m44d& rhs, size_t row, double n) {
+void m44d::multiply_row(m44d& rhs, size_t row, double mul) {
 	assert(row <= 4);
 
-	for(size_t i = 0; i < 4; i++) {
-		this->n[row][i] *= n;
-		rhs[row][i] *= n;
+	for(size_t c/*olumn*/ = 0; c < 4; c++) {
+		n[row][c] *= mul;
+		rhs[row][c] *= mul;
 	}
 }
 
@@ -504,9 +533,9 @@ void m44d::swap_rows(m44d& rhs, size_t a, size_t b) {
 	assert(b <= 4);
 	if(a == b) return;
 
-	for(size_t i = 0; i < 4; i++) {
-		std::swap<double>(n[i][a], n[i][b]);
-		std::swap<double>(rhs[i][a], rhs[i][b]);
+	for(size_t c/*olumn*/ = 0; c < 4; c++) {
+		std::swap<double>(n[a][c], n[b][c]);
+		std::swap<double>(rhs[a][c], rhs[b][c]);
 	}
 }
 
@@ -514,10 +543,23 @@ void m44d::add_row(m44d& rhs, size_t from, size_t to, double n) {
 	assert(from <= 4);
 	assert(to <= 4);
 
-	for(size_t i = 0; i < 4; i++) {
-		this->n[to][i] += this->n[from][i] * n;
-		rhs[to][i] += rhs[from][i] * n;
+	for(size_t c/*olumn*/ = 0; c < 4; c++) {
+		this->n[to][c] += this->n[from][c] * n;
+		rhs[to][c] += rhs[from][c] * n;
 	}
+}
+
+bool m44d::equals(const m44d& other, double delta) const {
+	for(size_t r/*ow*/ = 0; r < 4; r++) {
+		for(size_t c/*olumn*/ = 0; c < 4; c++) {
+			if(!IS_APPROX_0(n[r][c] - other[r][c], delta)) return false;
+		}
+	}
+	return true;
+}
+
+bool m44d::equals(const m44d& a, const m44d& b, double delta) {
+	return a.equals(b, delta);
 }
 
 // m44d operators (non scalar)
