@@ -2,8 +2,8 @@
 #include <csignal>
 
 #include "libdraw.hpp"
-#include "lib/write_screen/drawlib.h"
-#include "lib/vector/vector.h"
+#include "drawlib.h"
+#include "vector.h"
 #include "timer.hpp"
 #include "matrix.hpp"
 

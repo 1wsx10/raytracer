@@ -16,10 +16,10 @@ CFLAGS= $(OPTIMISATIONS) $(RTTI) $(EXCEPTIONS) -std=c++2a -Wall $(DFILERULES)
 LDFLAGS=$(CFLAGS) -lncurses -lm -pthread
 CC=g++
 DOT_A_FILES= lib/vector/libvector.a lib/write_screen/libdraw.a
-INC= lib/
 
 # "lib/vector/libvector.a" becomes "-Llib/vector/"
 L=$(addprefix -L,$(dir $(DOT_A_FILES)))
+INC=$(addprefix -I,$(dir $(DOT_A_FILES)))
 # "lib/vector/libvector.a" becomes "-lvector"
 l=$(addprefix -l,$(notdir $(basename $(subst /lib,/,$(DOT_A_FILES)))))
 
@@ -28,6 +28,12 @@ l=$(addprefix -l,$(notdir $(basename $(subst /lib,/,$(DOT_A_FILES)))))
 .SUFFIXES: .cpp .h .o .a #define our own
 
 all: $(PROGRAM)
+
+y_inner: VARFLAGS=-DFRAME_TIMES_NAME=x_inner_frame_times.csv -DDRAW_X_INNER
+y_inner: PROGRAM=y_inner.out
+
+x_inner: VARFLAGS=-DFRAME_TIMES_NAME=y_inner_frame_times.csv -DDRAW_Y_INNER
+x_inner: PROGRAM=x_inner.out
 
 #SAY_LINKING:
 #	@echo '===================='
@@ -45,7 +51,7 @@ $(PROGRAM): $(OBJECTS) $(DOT_A_FILES) #SAY_LINKING
 #	@echo '===================='
 
 %.o: %.cpp #SAY_COMPILING
-	$(CC) -c $< -o $@ -I'$(INC)' $(CFLAGS)
+	$(CC) -c $< -o $@ $(INC) $(CFLAGS) $(VARFLAGS)
 	@echo
 
 $(DOT_A_FILES):
